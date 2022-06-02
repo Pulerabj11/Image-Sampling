@@ -1,0 +1,38 @@
+#1 sample files and move to new location
+import os
+import itertools
+import shutil
+import PySimpleGUI as sg
+
+sg.theme('DarkAmber')  # Add a touch of color
+
+# All the stuff inside your window.
+layout = [  [sg.Text('Source Folder Path'), sg.InputText(key='inputPath')],
+            [sg.Text('Output Folder Path'), sg.InputText(key='outputPath')],
+            [sg.Button('Ok')] ]
+
+# Create the Window
+window = sg.Window('Window Title', layout)
+
+# Create an event loop
+while True:
+    event, values = window.read()
+    fileIn = values['inputPath']  # Location of photos to be sampled
+    fileOut = values['outputPath']  # Location to put sampled photos
+    # End program if user closes window or
+    # presses the OK button
+    if event == "Ok":
+        for root, subdirs, photos in os.walk(fileIn):
+            from itertools import islice
+
+        #4 1 = first file, None = skip, 10 = every # file (# can change)
+        for photos in islice (fileIn, 2, None, 5):
+            print (photos)
+            path=os.path.join(root, photos)
+            shutil.move(path, fileOut)
+        break
+
+    if event == sg.WIN_CLOSED:
+        break
+
+window.close()
