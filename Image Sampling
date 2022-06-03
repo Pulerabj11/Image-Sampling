@@ -18,7 +18,12 @@ window = sg.Window('Window Title', layout)
 while True:
     event, values = window.read()
     fileIn = values['inputPath']  # Location of photos to be sampled
+    # fileIn = fileIn.replace("\", "/")
+    print(fileIn)
+    # raw_fileIn = r"{}".format(fileIn)
+    print(raw_fileIn)
     fileOut = values['outputPath']  # Location to put sampled photos
+    # raw_fileOut = r"{}".format(fileOut)
     # End program if user closes window or
     # presses the OK button
     if event == "Ok":
@@ -29,7 +34,7 @@ while True:
         for photos in islice (fileIn, 2, None, 5):
             print (photos)
             path=os.path.join(root, photos)
-            shutil.move(path, fileOut)
+            shutil.copyfile(path, raw_fileOut)
         break
 
     if event == sg.WIN_CLOSED:
