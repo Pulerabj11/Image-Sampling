@@ -3,41 +3,53 @@ import os
 import itertools
 import shutil
 import PySimpleGUI as sg
+from itertools import islice
+from pathlib import Path
 
 sg.theme('DarkAmber')  # Add a touch of color
 
 # All the stuff inside your window.
-layout = [  [sg.Text('Source Folder Path'), sg.InputText(key='inputPath')],
-            [sg.Text('Output Folder Path'), sg.InputText(key='outputPath')],
+layout = [  [sg.Text('Source Folder Path'), sg.InputText(key='INPUTPATH')],
+            [sg.Text('Output Folder Path'), sg.InputText(key='OUTPUTPATH')],
+            [sg.Text('Choose an amount:'), sg.Radio('1%', 'RADIO1', default=True, enable_events=True, key='1%'), sg.Radio('5%', 'RADIO1', enable_events=True, key='5%'), sg.Radio('10%', 'RADIO1', enable_events=True, key='10%'), sg.Radio('25%', 'RADIO1', enable_events=True, key='25%')],
             [sg.Button('Ok')] ]
 
 # Create the Window
 window = sg.Window('Window Title', layout)
 
+step = 100 # Default 100 == 1% of photos
+
 # Create an event loop
 while True:
     event, values = window.read()
-    fileIn = values['inputPath']  # Location of photos to be sampled
-    # fileIn = fileIn.replace("\", "/")
-    print(fileIn)
-    # raw_fileIn = r"{}".format(fileIn)
-    print(raw_fileIn)
-    fileOut = values['outputPath']  # Location to put sampled photos
-    # raw_fileOut = r"{}".format(fileOut)
+    if event == sg.WIN_CLOSED:
+        break
+
+    fileIn = values['INPUTPATH'].replace("\\","\\\\")  # Location of photos to be sampled
+    fileIn = fileIn.replace("\\\\\\\\uwpfs.ad.uwp.edu\\\\Departments", "M:") # Replace if server location is given
+
+    fileOut = values['OUTPUTPATH'].replace("\\","\\\\")  # Location of photos to be sampled
+    fileOut = fileOut.replace("\\\\\\\\uwpfs.ad.uwp.edu\\\\Departments", "M:") # Replace if server location is given
+
+    if event == "1%":
+        step = 100
+
+    if event == "5%":
+        step = 20
+
+    if event == "10%":
+        step = 10
+
+    if event == "25%":
+        step = 4
+
     # End program if user closes window or
     # presses the OK button
     if event == "Ok":
         for root, subdirs, photos in os.walk(fileIn):
-            from itertools import islice
-
-        #4 1 = first file, None = skip, 10 = every # file (# can change)
-        for photos in islice (fileIn, 2, None, 5):
-            print (photos)
-            path=os.path.join(root, photos)
-            shutil.copyfile(path, raw_fileOut)
-        break
-
-    if event == sg.WIN_CLOSED:
+            for name in islice(photos, 1, len(photos), step):
+                path=os.path.join(root, name)
+                shutil.copy(path, fileOut)
         break
 
 window.close()
