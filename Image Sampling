@@ -1,55 +1,144 @@
 #1 sample files and move to new location
 import os
-import itertools
+import io
 import shutil
 import PySimpleGUI as sg
 from itertools import islice
-from pathlib import Path
+from PIL import Image
 
-sg.theme('DarkAmber')  # Add a touch of color
 
-# All the stuff inside your window.
-layout = [  [sg.Text('Source Folder Path'), sg.InputText(key='INPUTPATH')],
-            [sg.Text('Output Folder Path'), sg.InputText(key='OUTPUTPATH')],
-            [sg.Text('Choose an amount:'), sg.Radio('1%', 'RADIO1', default=True, enable_events=True, key='1%'), sg.Radio('5%', 'RADIO1', enable_events=True, key='5%'), sg.Radio('10%', 'RADIO1', enable_events=True, key='10%'), sg.Radio('25%', 'RADIO1', enable_events=True, key='25%')],
-            [sg.Button('Ok')] ]
 
-# Create the Window
-window = sg.Window('Window Title', layout)
+def main():
+    sg.theme('DarkAmber')  # Add a touch of color
 
-step = 100 # Default 100 == 1% of photos
+    # All the stuff inside your window.
+    sampleLayout = [  [sg.Text('Source Folder Path'), sg.InputText(key='INPUTPATH')],
+                [sg.Text('Output Folder Path'), sg.InputText(key='OUTPUTPATH')],
+                [sg.Text('Choose an amount:'), sg.Radio('1%', 'RADIO1', default=True, enable_events=True, key='1%'), sg.Radio('5%', 'RADIO1', enable_events=True, key='5%'), sg.Radio('10%', 'RADIO1', enable_events=True, key='10%'), sg.Radio('25%', 'RADIO1', enable_events=True, key='25%')],
+                [sg.Button('Ok')] ]
 
-# Create an event loop
-while True:
-    event, values = window.read()
-    if event == sg.WIN_CLOSED:
+    # Create the Window
+    sampleWindow = sg.Window('Image Sampler', sampleLayout)
+
+    step = 100 # Default 100 == 1% of photos
+
+    #
+    # LOOP 1
+    # sampleWindow event loop
+    #
+    while True:
+        event, values = sampleWindow.read()
+        if event == sg.WIN_CLOSED:
+            exit()
+
+        # Set file I/O
+        fileIn = "M:\\Library\\Library Units\\Archives\\Archives team\\Brandon\\UWPAC103Photos"
+        # values['INPUTPATH'].replace("\\","\\\\")  # Location of photos to be sampled
+        # fileIn = fileIn.replace("\\\\\\\\uwpfs.ad.uwp.edu\\\\Departments", "M:") # Replace if server location is given
+
+        fileOut = "M:\\Library\\Library Units\\Archives\\Archives team\\Brandon\\SAMPLES TEST"
+        # values['OUTPUTPATH'].replace("\\","\\\\")  # Location of photos to be sampled
+        # fileOut = fileOut.replace("\\\\\\\\uwpfs.ad.uwp.edu\\\\Departments", "M:") # Replace if server location is given
+
+        # Set globalFileOut for use in imageViewerWindow
+        sampleFilePath = fileOut
+
+        # Radio options
+        # Set the step in islice for "OK" event
+        if event == "1%":
+            step = 100
+        if event == "5%":
+            step = 20
+        if event == "10%":
+            step = 10
+        if event == "25%":
+            step = 4
+
+        # On press of "OK" button, take a sample of a collection of photos
+        if event == "Ok":
+            for root, subdirs, photos in os.walk(fileIn):
+                for filename in islice(photos, 1, len(photos), step):
+                    path=os.path.join(root, filename)
+                    shutil.copy(path, fileOut)
+
+            sampleWindow.close()
+            break
+
+
+
+    # Set index to 0 for first image in imageViewerWindow
+    imgNum = 0
+
+    for root, subdirs, photos in os.walk(sampleFilePath):
         break
+        
+    imgFilename = photos[imgNum]
+    imgFilepath = root + "\\" + imgFilename
 
-    fileIn = values['INPUTPATH'].replace("\\","\\\\")  # Location of photos to be sampled
-    fileIn = fileIn.replace("\\\\\\\\uwpfs.ad.uwp.edu\\\\Departments", "M:") # Replace if server location is given
+    os.path.exists(imgFilepath)
+    image = Image.open(imgFilepath)
+    image.thumbnail((1000,1000))
+    bio = io.BytesIO()
+    image.save(bio, format="PNG")
 
-    fileOut = values['OUTPUTPATH'].replace("\\","\\\\")  # Location of photos to be sampled
-    fileOut = fileOut.replace("\\\\\\\\uwpfs.ad.uwp.edu\\\\Departments", "M:") # Replace if server location is given
+    # Create layout for imageViewerWindow
+    imageViewerLayout = [
+        [sg.Button('Previous', visible=False), sg.Image(data=bio.getvalue(), key="-IMAGE-"), sg.Button('Next')]
+    ]
 
-    if event == "1%":
-        step = 100
+    # Create the Window
+    imageViewerWindow = sg.Window('Sample Image Viewer', imageViewerLayout)
 
-    if event == "5%":
-        step = 20
+    def imgButtonVisibility():
+        if imgNum == len(photos)-1:
+            imageViewerWindow["Next"].update(visible=False)
+        else:
+            imageViewerWindow["Next"].update(visible=True)
 
-    if event == "10%":
-        step = 10
+        if imgNum == 0:
+            imageViewerWindow["Previous"].update(visible=False)
+        else:
+            imageViewerWindow["Previous"].update(visible=True)
 
-    if event == "25%":
-        step = 4
+    #
+    # LOOP 2
+    # imageViewerWindow event loop
+    #
+    while True:
+        event, values = imageViewerWindow.read()
+        if event == sg.WIN_CLOSED:
+            exit()
 
-    # End program if user closes window or
-    # presses the OK button
-    if event == "Ok":
-        for root, subdirs, photos in os.walk(fileIn):
-            for name in islice(photos, 1, len(photos), step):
-                path=os.path.join(root, name)
-                shutil.copy(path, fileOut)
-        break
+        if event == "Next":
+            imgNum += 1
+            imgFilename = photos[imgNum]
+            imgFilepath = root + "\\" + imgFilename
 
-window.close()
+            if os.path.exists(imgFilepath):
+                image = Image.open(imgFilepath)
+                image.thumbnail((400,400))
+                bio = io.BytesIO()
+                image.save(bio, format="PNG")
+                imageViewerWindow["-IMAGE-"].update(data=bio.getvalue())
+            imgButtonVisibility()
+
+        if event == "Previous":
+            imgNum -= 1
+            imgFilename = photos[imgNum]
+            imgFilepath = root + "\\" + imgFilename
+
+            if os.path.exists(imgFilepath):
+                image = Image.open(imgFilepath)
+                image.thumbnail((400,400))
+                bio = io.BytesIO()
+                image.save(bio, format="PNG")
+                imageViewerWindow["-IMAGE-"].update(data=bio.getvalue())
+            imgButtonVisibility()
+            
+
+        if event == "Exit":
+            exit()
+
+# MAIN
+if __name__ == "__main__":
+    main()
