@@ -1,7 +1,6 @@
 #1 sample files and move to new location
 import os
 import io
-from random import Random
 import shutil
 import PySimpleGUI as sg
 from itertools import islice
@@ -9,138 +8,177 @@ from PIL import Image
 import random
 
 def main():
-    sg.theme('DarkAmber')  # Add a touch of color
+    sg.theme("DarkAmber")  # Add a touch of color
 
-    # All the stuff inside your window.
-    sampleLayout = [[sg.Text('Source Folder Path'), sg.InputText(key='-INPUTPATH-')],
-                [sg.Text('Output Folder Path'), sg.InputText(key='-OUTPUTPATH-')],
-                [sg.Text('Choose an amount:'), sg.Slider(range=(1,100), default_value=1, size=(30, 12), orientation='horizontal', key='-SLIDER-')],
-                [sg.Button('Ok'), sg.Text('', key='-FILEINCOUNTER-', justification='right')]]
+    def view_sample_images(sampleFilePath):
+            # Set index to 0 for first image in imageViewerWindow
+            imgNum = 0
 
-    # Create the Window
-    sampleWindow = sg.Window('Image Sampler', sampleLayout)
+            # Image fixed height
+            fixed_height = 600
 
-    #
-    # sampleWindow event loop
-    #
-    while True:
-        event, values = sampleWindow.read()
-
-        chance = values['-SLIDER-']
-
-        if event == sg.WIN_CLOSED:
-            exit()
-
-        # Set file I/O
-        fileIn = "M:\\Library\\Library Units\\Archives\\Archives team\\Brandon\\UWPAC103Photos"
-        # values['-INPUTPATH-'].replace("\\","\\\\")  # Location of photos to be sampled
-        # fileIn = fileIn.replace("\\\\\\\\uwpfs.ad.uwp.edu\\\\Departments", "M:") # Replace if server location is given
-
-        fileOut = "M:\\Library\\Library Units\\Archives\\Archives team\\Brandon\\SAMPLES TEST"
-        # values['-OUTPUTPATH-'].replace("\\","\\\\")  # Location of photos to be sampled
-        # fileOut = fileOut.replace("\\\\\\\\uwpfs.ad.uwp.edu\\\\Departments", "M:") # Replace if server location is given
-
-        # Set globalFileOut for use in imageViewerWindow
-        sampleFilePath = fileOut
-
-        fileInCount = 1
-
-        # On press of "OK" button, take a sample of a collection of photos
-        if event == "Ok":
-            for root, subdirs, photos in os.walk(fileIn):
-                
+            # Get list of sample photo filenames
+            for root, subdirs, photos in os.walk(sampleFilePath):
                 for name in photos:
-                    if ('.jpg' or '.png') not in name:
+                    if (".jpg" or ".png") not in name:
                         photos.remove(name)
 
-                for filename in islice(photos, 0, len(photos), 1):
-                    sampleWindow["-FILEINCOUNTER-"].update(str(fileInCount) + " / " + str(len(photos)-1))
-                    sampleWindow.refresh()
-                    fileInCount+=1
-                    if 100*random.random() <= chance:
-                        if filename != 'Thumbs.db':
-                            path=os.path.join(root, filename)
-                            shutil.copy(path, fileOut)
-                # for filename in islice(photos, 1, len(photos), step):
-                #     path=os.path.join(root, filename)
-                #     shutil.copy(path, fileOut)
-
-            sampleWindow.close()
-            break
-
-    # Set index to 0 for first image in imageViewerWindow
-    imgNum = 0
-
-    # Image fixed height
-    fixed_height = 600
-
-    # Get list of sample photo filenames
-    for root, subdirs, photos in os.walk(sampleFilePath):
-        for name in photos:
-            if ('.jpg' or '.png') not in name:
-                photos.remove(name)
-
-    # Set image from photos
-    imgFilename = photos[imgNum]
-    imgFilepath = root + "\\" + imgFilename
-    os.path.exists(imgFilepath)
-    image = Image.open(imgFilepath)
-
-    # Calculate the width size based on resizing to a fixed height
-    def calculate_width(image):
-        height_percent = (fixed_height / float(image.size[1]))
-        width_size = int((float(image.size[0]) * float(height_percent)))
-        return width_size
-    
-    # When Prev or Next buttons are clicked, update the image
-    def update_image():
-        imgFilename = photos[imgNum]
-        imgFilepath = root + "\\" + imgFilename
-
-        if os.path.exists(imgFilepath):
+            # Set image from photos
+            imgFilename = photos[imgNum]
+            imgFilepath = root + "\\" + imgFilename
+            os.path.exists(imgFilepath)
             image = Image.open(imgFilepath)
+
+            # Calculate the width size based on resizing to a fixed height
+            def calculate_width(image):
+                height_percent = (fixed_height / float(image.size[1]))
+                width_size = int((float(image.size[0]) * float(height_percent)))
+                return width_size
+            
+            # When Prev or Next buttons are clicked, update the image
+            def update_image():
+                imgFilename = photos[imgNum]
+                imgFilepath = root + "\\" + imgFilename
+
+                if os.path.exists(imgFilepath):
+                    image = Image.open(imgFilepath)
+                    image = image.resize((calculate_width(image), fixed_height))
+                    bio = io.BytesIO()
+                    image.save(bio, format="PNG")
+                    imageViewerWindow["-IMAGE-"].update(data=bio.getvalue())
+                    imageViewerWindow["-IMAGECOUNT-"].update(str(imgNum+1) + " / " + str(len(photos)))
+
+            def ask_to_save():
+                savePopupLayout = [
+                    [sg.Text(text="Would you like to save this sample?")],
+                    [sg.Button("Yes"), sg.Button("No")]
+                ]
+                savePopup = sg.Window("",savePopupLayout, element_justification="c", keep_on_top=True, modal=True)
+
+                while True:
+                    event, values = savePopup.read()
+
+                    if event == sg.WIN_CLOSED:
+                        exit()
+                    if event == "Yes":
+                        savePopup.close()
+                    if event == "No":
+                        for file in photos:
+                            os.remove(root + "\\" + file)
+                        savePopup.close()
+                        # imageViewerWindow.close()
+
+            # Resize image
             image = image.resize((calculate_width(image), fixed_height))
+
+            # Save image to memory
             bio = io.BytesIO()
             image.save(bio, format="PNG")
-            imageViewerWindow["-IMAGE-"].update(data=bio.getvalue())
-            imageViewerWindow["-IMAGECOUNT-"].update(str(imgNum+1) + " / " + str(len(photos)))
 
-    # Resize image
-    image = image.resize((calculate_width(image), fixed_height))
+            # Create layout for imageViewerWindow
+            imageViewerLayout = [
+                [sg.Image(data=bio.getvalue(), key="-IMAGE-")],
+                [sg.Button("Prev"), sg.Text(str(imgNum+1) + " / " + str(len(photos)), key="-IMAGECOUNT-"), sg.Button("Next")]
+            ]
 
-    # Save image to memory
-    bio = io.BytesIO()
-    image.save(bio, format="PNG")
+            # Create the Window
+            imageViewerWindow = sg.Window("Sample Image Viewer", imageViewerLayout, size=(1100,fixed_height+40), element_justification="c")
 
-    # Create layout for imageViewerWindow
-    imageViewerLayout = [
-        [sg.Image(data=bio.getvalue(), key="-IMAGE-")],
-        [sg.Button('Prev'), sg.Text(str(imgNum+1) + " / " + str(len(photos)), key="-IMAGECOUNT-"), sg.Button('Next')]
-    ]
+            #
+            # imageViewerWindow event loop
+            #
+            while True:
+                event, values = imageViewerWindow.read()
+                if event == sg.WIN_CLOSED:
+                    ask_to_save()
 
-    # Create the Window
-    imageViewerWindow = sg.Window('Sample Image Viewer', imageViewerLayout, size=(1100,fixed_height+40), element_justification='c')
+                if event == "Next":
+                    if imgNum != len(photos)-1:
+                        imgNum += 1
+                        update_image()
 
-    #
-    # imageViewerWindow event loop
-    #
-    while True:
-        event, values = imageViewerWindow.read()
-        if event == sg.WIN_CLOSED:
-            exit()
+                if event == "Prev":
+                    if imgNum != 0:
+                        imgNum -= 1
+                        update_image()
 
-        if event == "Next":
-            if imgNum != len(photos)-1:
-                imgNum += 1
-                update_image()
+    def no_photos_in_sample_notification():
+        # All the stuff inside your window.
+        noPhotosLayout = [[sg.Text("Sample is too small! Try a larger percentage.")],
+            [sg.Button("Ok")]]
 
-        if event == "Prev":
-            if imgNum != 0:
-                imgNum -= 1
-                update_image()
-            
-        if event == "Exit":
-            exit()
+        # Create the Window
+        noPhotosPopup = sg.Window("Attention!", noPhotosLayout)
+
+        while True:
+            event, values = noPhotosPopup.read()
+
+            if event == sg.WIN_CLOSED:
+                quit()
+
+            if event == "Ok":
+                noPhotosPopup.close()
+                choose_collection_for_sample()
+
+    def choose_collection_for_sample():
+        # All the stuff inside your window.
+        sampleLayout = [[sg.Text("Source Folder Path"), sg.InputText(key="-INPUTPATH-")],
+                    [sg.Text("Output Folder Path"), sg.InputText(key="-OUTPUTPATH-")],
+                    [sg.Text("Choose an amount:"), sg.Slider(range=(1,100), default_value=1, size=(30, 12), orientation="horizontal", key="-SLIDER-")],
+                    [sg.Button("Ok"), sg.Text("", key="-FILEINCOUNTER-", justification="right")]]
+
+        # Create the Window
+        sampleWindow = sg.Window("Image Sampler", sampleLayout)
+        #
+        # sampleWindow event loop
+        #
+        while True:
+            event, values = sampleWindow.read()
+
+            chance = values["-SLIDER-"]
+
+            if event == sg.WIN_CLOSED:
+                quit()
+
+            # Set file I/O
+            fileIn = "M:\\Library\\Library Units\\Archives\\Archives team\\Brandon\\UWPAC103Photos"
+            # values['-INPUTPATH-'].replace("\\","\\\\")  # Location of photos to be sampled
+            # fileIn = fileIn.replace("\\\\\\\\uwpfs.ad.uwp.edu\\\\Departments", "M:") # Replace if server location is given
+
+            fileOut = "M:\\Library\\Library Units\\Archives\\Archives team\\Brandon\\SAMPLES TEST"
+            # values['-OUTPUTPATH-'].replace("\\","\\\\")  # Location of photos to be sampled
+            # fileOut = fileOut.replace("\\\\\\\\uwpfs.ad.uwp.edu\\\\Departments", "M:") # Replace if server location is given
+
+            sampleFilePath = fileOut
+
+            fileInCount = 1
+
+            # On press of "OK" button, take a sample of a collection of photos
+            if event == "Ok":
+                for root, subdirs, photos in os.walk(fileIn):
+        
+                    for name in photos:
+                        if (".jpg" or ".png") not in name:
+                            photos.remove(name)
+
+                    for filename in islice(photos, 0, len(photos), 1):
+                        sampleWindow["-FILEINCOUNTER-"].update(str(fileInCount) + " / " + str(len(photos)))
+                        sampleWindow.refresh()
+                        fileInCount+=1
+                        if 100*random.random() <= chance:
+                            path=os.path.join(root, filename)
+                            shutil.copy(path, fileOut)
+                sampleWindow.close()
+                # Get list of sample photo filenames
+                for root, subdirs, photos in os.walk(sampleFilePath):
+                    for name in photos:
+                        if (".jpg" or ".png") not in name:
+                            photos.remove(name)
+                if len(photos) == 0:
+                    no_photos_in_sample_notification()
+                view_sample_images(sampleFilePath)
+
+    choose_collection_for_sample()
 
 # MAIN
 if __name__ == "__main__":
