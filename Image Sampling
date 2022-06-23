@@ -1,4 +1,5 @@
 #1 sample files and move to new location
+from calendar import c
 import os
 import io
 import shutil
@@ -8,9 +9,34 @@ from PIL import Image
 import random
 
 def main():
-    sg.theme("DarkAmber")  # Add a touch of color
+    # Set the theme
+    sg.theme("DarkAmber")
 
-    def view_sample_images(sampleFilePath):
+    # Set accepted file types
+    acceptedFileTypes = ["jpg", "png", "tiff", "tif"]
+
+    # Create Collection Picker window
+    def make_window_collection_picker():
+        sampleLayout = [[sg.Text("Source Folder Path"), sg.InputText(key="-INPUTPATH-")],
+                    [sg.Text("Output Folder Path"), sg.InputText(key="-OUTPUTPATH-")],
+                    [sg.Text("Choose an amount:"), sg.Slider(range=(1,100), default_value=1, size=(30, 12), orientation="horizontal", key="-SLIDER-")],
+                    [sg.Button("Ok"), sg.Text("", key="-FILEINCOUNTER-", justification="right")]]
+
+        return sg.Window("Image Sampler", sampleLayout, finalize=True)
+
+    # Create Collection Picker window
+    def make_window_image_viewer(bio, imgNum, photos, fixed_height):
+        imageViewerLayout = [
+            [sg.Image(data=bio.getvalue(), key="-IMAGE-")],
+            [sg.Button("Prev"), sg.Text(str(imgNum+1) + " / " + str(len(photos)), key="-IMAGECOUNT-"), sg.Button("Next")]
+        ]
+
+        return sg.Window("Sample Image Viewer", imageViewerLayout, size=(1100,fixed_height+40), element_justification="c")
+
+    # Runs the image viewer
+    # Browse the sampled images
+    # Save or delete the samples
+    def view_sample_images(fileOut):
             # Set index to 0 for first image in imageViewerWindow
             imgNum = 0
 
@@ -18,9 +44,11 @@ def main():
             fixed_height = 600
 
             # Get list of sample photo filenames
-            for root, subdirs, photos in os.walk(sampleFilePath):
+            for root, subdirs, photos in os.walk(fileOut):
                 for name in photos:
-                    if (".jpg" or ".png") not in name:
+                    splitFileName = name.split(".")
+                    ext = splitFileName[1]
+                    if (ext not in acceptedFileTypes):
                         photos.remove(name)
 
             # Set image from photos
@@ -35,7 +63,7 @@ def main():
                 width_size = int((float(image.size[0]) * float(height_percent)))
                 return width_size
             
-            # When Prev or Next buttons are clicked, update the image
+            # When Prev or Next buttons are clicked, update the image and file counter
             def update_image():
                 imgFilename = photos[imgNum]
                 imgFilepath = root + "\\" + imgFilename
@@ -48,25 +76,37 @@ def main():
                     imageViewerWindow["-IMAGE-"].update(data=bio.getvalue())
                     imageViewerWindow["-IMAGECOUNT-"].update(str(imgNum+1) + " / " + str(len(photos)))
 
+            # Ask the user if they want to save or delete the samples
             def ask_to_save():
                 savePopupLayout = [
                     [sg.Text(text="Would you like to save this sample?")],
-                    [sg.Button("Yes"), sg.Button("No")]
+                    [sg.Button("Save"), sg.Button("Delete")]
                 ]
                 savePopup = sg.Window("",savePopupLayout, element_justification="c", keep_on_top=True, modal=True)
 
+                # Event Loop
                 while True:
+                    # Get events and values from the window
                     event, values = savePopup.read()
 
                     if event == sg.WIN_CLOSED:
-                        exit()
-                    if event == "Yes":
                         savePopup.close()
-                    if event == "No":
+                        quit()
+
+                    # If save is chosen, do nothing
+                    if event == "Save":
+                        savePopup.close()
+
+                    # If delete is chosen, iterate through files and remove them
+                    if event == "Delete":
                         for file in photos:
-                            os.remove(root + "\\" + file)
+                            filepath = root + "\\" + file
+                            if os.path.exists(filepath):
+                                if os.access(filepath):                                
+                                    os.remove(filepath)
+                                else:
+                                    sg.popup()
                         savePopup.close()
-                        # imageViewerWindow.close()
 
             # Resize image
             image = image.resize((calculate_width(image), fixed_height))
@@ -75,21 +115,17 @@ def main():
             bio = io.BytesIO()
             image.save(bio, format="PNG")
 
-            # Create layout for imageViewerWindow
-            imageViewerLayout = [
-                [sg.Image(data=bio.getvalue(), key="-IMAGE-")],
-                [sg.Button("Prev"), sg.Text(str(imgNum+1) + " / " + str(len(photos)), key="-IMAGECOUNT-"), sg.Button("Next")]
-            ]
-
-            # Create the Window
-            imageViewerWindow = sg.Window("Sample Image Viewer", imageViewerLayout, size=(1100,fixed_height+40), element_justification="c")
+            # Create Image Viewer window
+            imageViewerWindow = make_window_image_viewer(bio, imgNum, photos, fixed_height)
 
             #
             # imageViewerWindow event loop
             #
             while True:
+                # Get events and values from the window
                 event, values = imageViewerWindow.read()
                 if event == sg.WIN_CLOSED:
+                    imageViewerWindow.close()
                     ask_to_save()
 
                 if event == "Next":
@@ -102,43 +138,18 @@ def main():
                         imgNum -= 1
                         update_image()
 
-    def no_photos_in_sample_notification():
-        # All the stuff inside your window.
-        noPhotosLayout = [[sg.Text("Sample is too small! Try a larger percentage.")],
-            [sg.Button("Ok")]]
-
-        # Create the Window
-        noPhotosPopup = sg.Window("Attention!", noPhotosLayout)
-
-        while True:
-            event, values = noPhotosPopup.read()
-
-            if event == sg.WIN_CLOSED:
-                quit()
-
-            if event == "Ok":
-                noPhotosPopup.close()
-                choose_collection_for_sample()
-
+    # Runs the Collection Picker Window
+    # Enter file input and output paths
+    # Pick a percentage for the sample of a collection
     def choose_collection_for_sample():
-        # All the stuff inside your window.
-        sampleLayout = [[sg.Text("Source Folder Path"), sg.InputText(key="-INPUTPATH-")],
-                    [sg.Text("Output Folder Path"), sg.InputText(key="-OUTPUTPATH-")],
-                    [sg.Text("Choose an amount:"), sg.Slider(range=(1,100), default_value=1, size=(30, 12), orientation="horizontal", key="-SLIDER-")],
-                    [sg.Button("Ok"), sg.Text("", key="-FILEINCOUNTER-", justification="right")]]
 
-        # Create the Window
-        sampleWindow = sg.Window("Image Sampler", sampleLayout)
-        #
-        # sampleWindow event loop
-        #
+        # Create Collection Picker window
+        collectionPickerWindow = make_window_collection_picker()
+
+        # Event Loop
         while True:
-            event, values = sampleWindow.read()
-
-            chance = values["-SLIDER-"]
-
-            if event == sg.WIN_CLOSED:
-                quit()
+            # Get events and values from the window
+            event, values = collectionPickerWindow.read()
 
             # Set file I/O
             fileIn = "M:\\Library\\Library Units\\Archives\\Archives team\\Brandon\\UWPAC103Photos"
@@ -149,35 +160,51 @@ def main():
             # values['-OUTPUTPATH-'].replace("\\","\\\\")  # Location of photos to be sampled
             # fileOut = fileOut.replace("\\\\\\\\uwpfs.ad.uwp.edu\\\\Departments", "M:") # Replace if server location is given
 
-            sampleFilePath = fileOut
-
             fileInCount = 1
+
+            if event == sg.WIN_CLOSED:
+                collectionPickerWindow.close()
+                quit()
 
             # On press of "OK" button, take a sample of a collection of photos
             if event == "Ok":
-                for root, subdirs, photos in os.walk(fileIn):
-        
-                    for name in photos:
-                        if (".jpg" or ".png") not in name:
-                            photos.remove(name)
+                # Check for formatting issues before checking the folder paths
+                if not os.path.exists(fileIn) or not os.path.exists(fileOut):
+                    if not os.path.exists(fileIn):
+                        sg.popup("Invalid source folder path!")
+                    if not os.path.exists(fileOut):
+                        sg.popup("Invalid output folder path!")
+                else:
+                    # Get folder data from fileIn
+                    for root, subdirs, photos in os.walk(fileIn):
 
-                    for filename in islice(photos, 0, len(photos), 1):
-                        sampleWindow["-FILEINCOUNTER-"].update(str(fileInCount) + " / " + str(len(photos)))
-                        sampleWindow.refresh()
-                        fileInCount+=1
-                        if 100*random.random() <= chance:
-                            path=os.path.join(root, filename)
-                            shutil.copy(path, fileOut)
-                sampleWindow.close()
-                # Get list of sample photo filenames
-                for root, subdirs, photos in os.walk(sampleFilePath):
-                    for name in photos:
-                        if (".jpg" or ".png") not in name:
-                            photos.remove(name)
-                if len(photos) == 0:
-                    no_photos_in_sample_notification()
-                view_sample_images(sampleFilePath)
+                        # Remove anything that isn't a photo from the list
+                        for name in photos:
+                            splitFileName = name.split(".")
+                            ext = splitFileName[1]
+                            if (ext not in acceptedFileTypes):
+                                photos.remove(name)
+                        
+                        # User sets the percent of collection they want
+                        chance = values["-SLIDER-"]
 
+                        # Iterate through the source photos and get a sample of a given percent of them
+                        for filename in islice(photos, 0, len(photos), 1):
+                            collectionPickerWindow["-FILEINCOUNTER-"].update(str(fileInCount) + " / " + str(len(photos)))
+                            collectionPickerWindow.refresh()
+                            fileInCount+=1
+                            if 100*random.random() <= chance:
+                                path=os.path.join(root, filename)
+                                shutil.copy(path, fileOut)
+
+                    # If no photos were sampled, notify user
+                    if len(photos) == 0:
+                        sg.popup("Sample is too small! Try a larger percentage.")
+                    else:
+                        collectionPickerWindow.close()
+                        view_sample_images(fileOut)
+
+    # Call func to open window for choosing a collection
     choose_collection_for_sample()
 
 # MAIN
