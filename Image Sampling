@@ -1,6 +1,7 @@
 #1 sample files and move to new location
 from calendar import c
 import os
+import stat
 import io
 import shutil
 import PySimpleGUI as sg
@@ -19,7 +20,7 @@ def main():
     def make_window_collection_picker():
         sampleLayout = [[sg.Text("Source Folder Path"), sg.InputText(key="-INPUTPATH-")],
                     [sg.Text("Output Folder Path"), sg.InputText(key="-OUTPUTPATH-")],
-                    [sg.Text("Choose an amount:"), sg.Slider(range=(1,100), default_value=1, size=(30, 12), orientation="horizontal", key="-SLIDER-")],
+                    [sg.Text("Choose an amount:"), sg.Slider(range=(1,100), default_value=1, size=(30, 15), orientation="horizontal", key="-SLIDER-")],
                     [sg.Button("Ok"), sg.Text("", key="-FILEINCOUNTER-", justification="right")]]
 
         return sg.Window("Image Sampler", sampleLayout, finalize=True)
@@ -33,6 +34,13 @@ def main():
 
         return sg.Window("Sample Image Viewer", imageViewerLayout, size=(1100,fixed_height+40), element_justification="c")
 
+    def make_window_ask_to_save():
+        savePopupLayout = [
+                            [sg.Text(text="Would you like to save this sample?")],
+                            [sg.Button("Save"), sg.Button("Delete")]
+                        ]
+        return sg.Window("",savePopupLayout, element_justification="c", keep_on_top=True, modal=True)
+
     # Runs the image viewer
     # Browse the sampled images
     # Save or delete the samples
@@ -43,17 +51,18 @@ def main():
             # Image fixed height
             fixed_height = 600
 
-            # Get list of sample photo filenames
-            for root, subdirs, photos in os.walk(fileOut):
-                for name in photos:
-                    splitFileName = name.split(".")
-                    ext = splitFileName[1]
-                    if (ext not in acceptedFileTypes):
-                        photos.remove(name)
+            outputFileList = os.listdir(fileOut)
+
+            for samplePhoto in outputFileList[:]:
+                # Get the extension of the file and check against acceptedFileTypes
+                splitFileName = samplePhoto.split(".")
+                ext = splitFileName[1]
+                if (ext not in acceptedFileTypes):
+                    outputFileList.remove(samplePhoto)
 
             # Set image from photos
-            imgFilename = photos[imgNum]
-            imgFilepath = root + "\\" + imgFilename
+            imgFilename = outputFileList[imgNum]
+            imgFilepath = fileOut + "\\" + imgFilename
             os.path.exists(imgFilepath)
             image = Image.open(imgFilepath)
 
@@ -65,8 +74,8 @@ def main():
             
             # When Prev or Next buttons are clicked, update the image and file counter
             def update_image():
-                imgFilename = photos[imgNum]
-                imgFilepath = root + "\\" + imgFilename
+                imgFilename = outputFileList[imgNum]
+                imgFilepath = fileOut + "\\" + imgFilename
 
                 if os.path.exists(imgFilepath):
                     image = Image.open(imgFilepath)
@@ -74,17 +83,14 @@ def main():
                     bio = io.BytesIO()
                     image.save(bio, format="PNG")
                     imageViewerWindow["-IMAGE-"].update(data=bio.getvalue())
-                    imageViewerWindow["-IMAGECOUNT-"].update(str(imgNum+1) + " / " + str(len(photos)))
+                    imageViewerWindow["-IMAGECOUNT-"].update(str(imgNum+1) + " / " + str(len(outputFileList)))
 
             # Ask the user if they want to save or delete the samples
             def ask_to_save():
-                savePopupLayout = [
-                    [sg.Text(text="Would you like to save this sample?")],
-                    [sg.Button("Save"), sg.Button("Delete")]
-                ]
-                savePopup = sg.Window("",savePopupLayout, element_justification="c", keep_on_top=True, modal=True)
+                # Create ask_to_save window
+                savePopup = make_window_ask_to_save()
 
-                # Event Loop
+                # Ask_to_save Event Loop
                 while True:
                     # Get events and values from the window
                     event, values = savePopup.read()
@@ -97,15 +103,24 @@ def main():
                     if event == "Save":
                         savePopup.close()
 
+                    # Initialized to check if sample files are set to 'Read-only'
+                    readOnlyCheck = False
+
                     # If delete is chosen, iterate through files and remove them
                     if event == "Delete":
-                        for file in photos:
-                            filepath = root + "\\" + file
+                        for file in outputFileList:
+                            filepath = fileOut + "\\" + file
                             if os.path.exists(filepath):
-                                if os.access(filepath):                                
+                                # Check if file is 'writable'
+                                # If file can't be deleted, it may be set to 'Read-only'
+                                if os.access(filepath, os.W_OK):                                
                                     os.remove(filepath)
                                 else:
-                                    sg.popup()
+                                    os.chmod(filepath, stat.S_IWRITE)
+                                    os.remove(filepath)
+                                    readOnlyCheck = True
+                        if readOnlyCheck == True:
+                            sg.popup("At least one file is unable to be deleted.\nCheck its properties for the 'Read-only' setting.", keep_on_top=True, modal=True)
                         savePopup.close()
 
             # Resize image
@@ -116,11 +131,9 @@ def main():
             image.save(bio, format="PNG")
 
             # Create Image Viewer window
-            imageViewerWindow = make_window_image_viewer(bio, imgNum, photos, fixed_height)
+            imageViewerWindow = make_window_image_viewer(bio, imgNum, outputFileList, fixed_height)
 
-            #
             # imageViewerWindow event loop
-            #
             while True:
                 # Get events and values from the window
                 event, values = imageViewerWindow.read()
@@ -129,7 +142,7 @@ def main():
                     ask_to_save()
 
                 if event == "Next":
-                    if imgNum != len(photos)-1:
+                    if imgNum != len(outputFileList)-1:
                         imgNum += 1
                         update_image()
 
@@ -156,7 +169,8 @@ def main():
             # values['-INPUTPATH-'].replace("\\","\\\\")  # Location of photos to be sampled
             # fileIn = fileIn.replace("\\\\\\\\uwpfs.ad.uwp.edu\\\\Departments", "M:") # Replace if server location is given
 
-            fileOut = "M:\\Library\\Library Units\\Archives\\Archives team\\Brandon\\SAMPLES TEST"
+            fileOut = fileIn + "\\Samples"
+            # "M:\\Library\\Library Units\\Archives\\Archives team\\Brandon\\SAMPLES TEST"
             # values['-OUTPUTPATH-'].replace("\\","\\\\")  # Location of photos to be sampled
             # fileOut = fileOut.replace("\\\\\\\\uwpfs.ad.uwp.edu\\\\Departments", "M:") # Replace if server location is given
 
@@ -168,38 +182,53 @@ def main():
 
             # On press of "OK" button, take a sample of a collection of photos
             if event == "Ok":
+                if not os.path.exists(fileOut):
+                    os.makedirs(fileOut)
+
                 # Check for formatting issues before checking the folder paths
                 if not os.path.exists(fileIn) or not os.path.exists(fileOut):
                     if not os.path.exists(fileIn):
-                        sg.popup("Invalid source folder path!")
+                        sg.popup("Invalid source folder path!", keep_on_top=True, modal=True)
                     if not os.path.exists(fileOut):
-                        sg.popup("Invalid output folder path!")
+                        sg.popup("Invalid output folder path!", keep_on_top=True, modal=True)
+                elif fileIn == fileOut:
+                    sg.popup("Your source and output folder paths are the same!\nPlease review the folder paths.", keep_on_top=True, modal=True)
+                    
                 else:
-                    # Get folder data from fileIn
-                    for root, subdirs, photos in os.walk(fileIn):
+                    # User sets the percent of collection they want
+                    chance = values["-SLIDER-"]
 
-                        # Remove anything that isn't a photo from the list
-                        for name in photos:
-                            splitFileName = name.split(".")
+                    photoIsCopied = False
+
+                    sourceFileList = os.listdir(fileIn)
+                    print(sourceFileList)
+                    for collectionPhoto in sourceFileList[:]:
+                        # Get the extension of the file and check against acceptedFileTypes
+                        if "." in collectionPhoto:
+                            splitFileName = collectionPhoto.split(".")
                             ext = splitFileName[1]
-                            if (ext not in acceptedFileTypes):
-                                photos.remove(name)
-                        
-                        # User sets the percent of collection they want
-                        chance = values["-SLIDER-"]
+                            if (ext in acceptedFileTypes):
+                                print(collectionPhoto)
+                                collectionPickerWindow["-FILEINCOUNTER-"].update(str(fileInCount) + " / " + str(len(sourceFileList)))
+                                collectionPickerWindow.refresh()
+                                fileInCount+=1
+                                if 100*random.random() <= chance:
+                                    path=os.path.join(fileIn, collectionPhoto)
+                                    try:
+                                        shutil.copy(path, fileOut)
+                                    except:
+                                        print('unknown error')
+                                    photoIsCopied = True
+                            else:
+                                sourceFileList.remove(collectionPhoto)
+                        else:
+                            sourceFileList.remove(collectionPhoto)
 
-                        # Iterate through the source photos and get a sample of a given percent of them
-                        for filename in islice(photos, 0, len(photos), 1):
-                            collectionPickerWindow["-FILEINCOUNTER-"].update(str(fileInCount) + " / " + str(len(photos)))
-                            collectionPickerWindow.refresh()
-                            fileInCount+=1
-                            if 100*random.random() <= chance:
-                                path=os.path.join(root, filename)
-                                shutil.copy(path, fileOut)
+                    print(sourceFileList)
 
                     # If no photos were sampled, notify user
-                    if len(photos) == 0:
-                        sg.popup("Sample is too small! Try a larger percentage.")
+                    if not photoIsCopied:
+                        sg.popup("Sample is too small! Try a larger percentage.", keep_on_top=True, modal=True)
                     else:
                         collectionPickerWindow.close()
                         view_sample_images(fileOut)
