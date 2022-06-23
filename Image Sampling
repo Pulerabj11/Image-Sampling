@@ -5,7 +5,6 @@ import stat
 import io
 import shutil
 import PySimpleGUI as sg
-from itertools import islice
 from PIL import Image
 import random
 
@@ -18,9 +17,8 @@ def main():
 
     # Create Collection Picker window
     def make_window_collection_picker():
-        sampleLayout = [[sg.Text("Source Folder Path"), sg.InputText(key="-INPUTPATH-")],
-                    [sg.Text("Output Folder Path"), sg.InputText(key="-OUTPUTPATH-")],
-                    [sg.Text("Choose an amount:"), sg.Slider(range=(1,100), default_value=1, size=(30, 15), orientation="horizontal", key="-SLIDER-")],
+        sampleLayout = [[sg.Text("Source Folder Path"), sg.InputText(key="-INPUTPATH-"), sg.FolderBrowse(initial_folder="M:\\Library\\Library Units\\Archives\\Archives team")],
+                    [sg.Text("Choose an amount (%):"), sg.Slider(range=(1,100), default_value=1, size=(30, 15), orientation="horizontal", key="-SLIDER-")],
                     [sg.Button("Ok"), sg.Text("", key="-FILEINCOUNTER-", justification="right")]]
 
         return sg.Window("Image Sampler", sampleLayout, finalize=True)
@@ -111,16 +109,12 @@ def main():
                         for file in outputFileList:
                             filepath = fileOut + "\\" + file
                             if os.path.exists(filepath):
-                                # Check if file is 'writable'
-                                # If file can't be deleted, it may be set to 'Read-only'
+                                # Handle files set as 'Read-only'
                                 if os.access(filepath, os.W_OK):                                
                                     os.remove(filepath)
                                 else:
                                     os.chmod(filepath, stat.S_IWRITE)
                                     os.remove(filepath)
-                                    readOnlyCheck = True
-                        if readOnlyCheck == True:
-                            sg.popup("At least one file is unable to be deleted.\nCheck its properties for the 'Read-only' setting.", keep_on_top=True, modal=True)
                         savePopup.close()
 
             # Resize image
@@ -165,15 +159,12 @@ def main():
             event, values = collectionPickerWindow.read()
 
             # Set file I/O
-            fileIn = "M:\\Library\\Library Units\\Archives\\Archives team\\Brandon\\UWPAC103Photos"
-            # values['-INPUTPATH-'].replace("\\","\\\\")  # Location of photos to be sampled
-            # fileIn = fileIn.replace("\\\\\\\\uwpfs.ad.uwp.edu\\\\Departments", "M:") # Replace if server location is given
+            fileIn = values['-INPUTPATH-'].replace("\\","\\\\")  # Location of photos to be sampled
+            fileIn = fileIn.replace("\\\\\\\\uwpfs.ad.uwp.edu\\\\Departments", "M:") # Replace if server location is given
 
             fileOut = fileIn + "\\Samples"
-            # "M:\\Library\\Library Units\\Archives\\Archives team\\Brandon\\SAMPLES TEST"
-            # values['-OUTPUTPATH-'].replace("\\","\\\\")  # Location of photos to be sampled
-            # fileOut = fileOut.replace("\\\\\\\\uwpfs.ad.uwp.edu\\\\Departments", "M:") # Replace if server location is given
-
+    
+            # Initialize file counter for source read
             fileInCount = 1
 
             if event == sg.WIN_CLOSED:
@@ -188,49 +179,45 @@ def main():
                 # Check for formatting issues before checking the folder paths
                 if not os.path.exists(fileIn) or not os.path.exists(fileOut):
                     if not os.path.exists(fileIn):
-                        sg.popup("Invalid source folder path!", keep_on_top=True, modal=True)
-                    if not os.path.exists(fileOut):
-                        sg.popup("Invalid output folder path!", keep_on_top=True, modal=True)
-                elif fileIn == fileOut:
-                    sg.popup("Your source and output folder paths are the same!\nPlease review the folder paths.", keep_on_top=True, modal=True)
-                    
+                        sg.popup("Invalid source folder path!", keep_on_top=True, modal=True)                  
                 else:
                     # User sets the percent of collection they want
                     chance = values["-SLIDER-"]
 
+                    # Initialized to check if > 0 files have been copied
                     photoIsCopied = False
 
+                    # List of files in source folder
                     sourceFileList = os.listdir(fileIn)
-                    print(sourceFileList)
+
+                    # Copy a sample from source folder to output folder
                     for collectionPhoto in sourceFileList[:]:
                         # Get the extension of the file and check against acceptedFileTypes
                         if "." in collectionPhoto:
                             splitFileName = collectionPhoto.split(".")
                             ext = splitFileName[1]
                             if (ext in acceptedFileTypes):
-                                print(collectionPhoto)
+                                # Update the file counter
                                 collectionPickerWindow["-FILEINCOUNTER-"].update(str(fileInCount) + " / " + str(len(sourceFileList)))
                                 collectionPickerWindow.refresh()
                                 fileInCount+=1
+
+                                # Copy photos based on chance to create a sample
                                 if 100*random.random() <= chance:
                                     path=os.path.join(fileIn, collectionPhoto)
-                                    try:
-                                        shutil.copy(path, fileOut)
-                                    except:
-                                        print('unknown error')
+                                    shutil.copy(path, fileOut)
                                     photoIsCopied = True
                             else:
                                 sourceFileList.remove(collectionPhoto)
                         else:
                             sourceFileList.remove(collectionPhoto)
 
-                    print(sourceFileList)
-
                     # If no photos were sampled, notify user
                     if not photoIsCopied:
                         sg.popup("Sample is too small! Try a larger percentage.", keep_on_top=True, modal=True)
                     else:
                         collectionPickerWindow.close()
+                        # Open Image Viewer window
                         view_sample_images(fileOut)
 
     # Call func to open window for choosing a collection
