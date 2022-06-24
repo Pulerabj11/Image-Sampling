@@ -18,25 +18,23 @@ def main():
     # Create Collection Picker window
     def make_window_collection_picker():
         sampleLayout = [[sg.Text("Source Folder Path"), sg.InputText(key="-INPUTPATH-"), sg.FolderBrowse(initial_folder="M:\\Library\\Library Units\\Archives\\Archives team")],
-                    [sg.Text("Choose an amount (%):"), sg.Slider(range=(1,100), default_value=1, size=(30, 15), orientation="horizontal", key="-SLIDER-")],
-                    [sg.Button("Ok"), sg.Text("", key="-FILEINCOUNTER-", justification="right")]]
+            [sg.Text("Choose an amount (%):"), sg.Slider(range=(1,100), default_value=1, size=(30, 15), orientation="horizontal", key="-SLIDER-")],
+            [sg.Button("Ok"), sg.Text("", key="-FILEINCOUNTER-", justification="right")]]
 
         return sg.Window("Image Sampler", sampleLayout, finalize=True)
 
     # Create Collection Picker window
-    def make_window_image_viewer(bio, imgNum, photos, fixed_height):
-        imageViewerLayout = [
-            [sg.Image(data=bio.getvalue(), key="-IMAGE-")],
-            [sg.Button("Prev"), sg.Text(str(imgNum+1) + " / " + str(len(photos)), key="-IMAGECOUNT-"), sg.Button("Next")]
-        ]
+    def make_window_image_viewer(bio, imgNum, photos, fixed_height, fileOut):
+        imageViewerLayout = [[sg.Image(data=bio.getvalue(), key="-IMAGE-")],
+            [sg.Button("Prev"), sg.Text(str(imgNum+1) + " / " + str(len(photos)), key="-IMAGECOUNT-"), sg.Button("Next")],
+            [sg.Text(fileOut)]]
 
-        return sg.Window("Sample Image Viewer", imageViewerLayout, size=(1100,fixed_height+40), element_justification="c")
+        return sg.Window("Sample Image Viewer", imageViewerLayout, size=(1400,fixed_height+80), element_justification="c")
 
     def make_window_ask_to_save():
-        savePopupLayout = [
-                            [sg.Text(text="Would you like to save this sample?")],
-                            [sg.Button("Save"), sg.Button("Delete")]
-                        ]
+        savePopupLayout = [[sg.Text(text="Would you like to save this sample?")],
+            [sg.Button("Save"), sg.Button("Delete")]]
+
         return sg.Window("",savePopupLayout, element_justification="c", keep_on_top=True, modal=True)
 
     # Runs the image viewer
@@ -104,7 +102,7 @@ def main():
                     # Initialized to check if sample files are set to 'Read-only'
                     readOnlyCheck = False
 
-                    # If delete is chosen, iterate through files and remove them
+                    # If delete is chosen, remove files and fileOut directory
                     if event == "Delete":
                         for file in outputFileList:
                             filepath = fileOut + "\\" + file
@@ -115,6 +113,8 @@ def main():
                                 else:
                                     os.chmod(filepath, stat.S_IWRITE)
                                     os.remove(filepath)
+                        if os.path.isdir(fileOut):
+                            os.rmdir(fileOut)
                         savePopup.close()
 
             # Resize image
@@ -124,8 +124,11 @@ def main():
             bio = io.BytesIO()
             image.save(bio, format="PNG")
 
+            fileOut = fileOut.replace("\\\\", "\\")
+            fileOut = fileOut.replace("/", "\\")
+
             # Create Image Viewer window
-            imageViewerWindow = make_window_image_viewer(bio, imgNum, outputFileList, fixed_height)
+            imageViewerWindow = make_window_image_viewer(bio, imgNum, outputFileList, fixed_height, fileOut)
 
             # imageViewerWindow event loop
             while True:
@@ -157,12 +160,6 @@ def main():
         while True:
             # Get events and values from the window
             event, values = collectionPickerWindow.read()
-
-            # Set file I/O
-            fileIn = values['-INPUTPATH-'].replace("\\","\\\\")  # Location of photos to be sampled
-            fileIn = fileIn.replace("\\\\\\\\uwpfs.ad.uwp.edu\\\\Departments", "M:") # Replace if server location is given
-
-            fileOut = fileIn + "\\Samples"
     
             # Initialize file counter for source read
             fileInCount = 1
@@ -173,13 +170,15 @@ def main():
 
             # On press of "OK" button, take a sample of a collection of photos
             if event == "Ok":
-                if not os.path.exists(fileOut):
-                    os.makedirs(fileOut)
+                # Set file I/O
+                fileIn = values['-INPUTPATH-'].replace("\\","\\\\")  # Location of photos to be sampled
+                fileIn = fileIn.replace("\\\\\\\\uwpfs.ad.uwp.edu\\\\Departments", "M:") # Replace if server location is given
+
+                fileOut = fileIn + "\\Samples"
 
                 # Check for formatting issues before checking the folder paths
-                if not os.path.exists(fileIn) or not os.path.exists(fileOut):
-                    if not os.path.exists(fileIn):
-                        sg.popup("Invalid source folder path!", keep_on_top=True, modal=True)                  
+                if not os.path.exists(fileIn):
+                    sg.popup("Invalid source folder path!", keep_on_top=True, modal=True)                  
                 else:
                     # User sets the percent of collection they want
                     chance = values["-SLIDER-"]
@@ -204,6 +203,8 @@ def main():
 
                                 # Copy photos based on chance to create a sample
                                 if 100*random.random() <= chance:
+                                    if not os.path.exists(fileOut):
+                                        os.makedirs(fileOut)
                                     path=os.path.join(fileIn, collectionPhoto)
                                     shutil.copy(path, fileOut)
                                     photoIsCopied = True
