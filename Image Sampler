@@ -4,6 +4,7 @@ import os
 import stat
 import io
 import shutil
+from tkinter import FLAT
 import PySimpleGUI as sg
 from PIL import Image
 import random
@@ -19,7 +20,7 @@ def main():
     # Create Collection Picker window
     def make_window_collection_picker():
         sampleLayout = [[sg.Text("Source Folder Path"), sg.InputText(key="-INPUTPATH-"), sg.FolderBrowse(initial_folder="M:\\Library\\Library Units\\Archives\\Archives team")],
-            [sg.Text("Choose Percentage:"), sg.Slider(range=(1,100), default_value=1, size=(30, 15), orientation="horizontal", key="-SLIDER-")],
+            [sg.Text("Choose Percentage:"), sg.Slider(range=(1,100), default_value=1, size=(41, 15), orientation="horizontal", key="-SLIDER-")],
             [sg.Button("Ok"), sg.Text("", key="-FILEINCOUNTER-", justification="right")]]
 
         return sg.Window("Image Sampler", sampleLayout, finalize=True)
@@ -27,10 +28,14 @@ def main():
     # Create Collection Picker window
     def make_window_image_viewer(bio, imgNum, outputFileList, fixed_height, fileOut):
         imageViewerLayout = [[sg.Image(data=bio.getvalue(), key="-IMAGE-")],
-            [sg.Button("Prev"), sg.Text(str(imgNum+1) + " / " + str(len(outputFileList)), key="-IMAGECOUNT-"), sg.Button("Next")],
+            [sg.Frame("", [[sg.Button("Create Another Sample")]], size=(200, 36), relief=FLAT, element_justification="l"),
+            sg.Push(),
+            sg.Frame("", [[sg.Button("Prev"), sg.Text(str(imgNum+1) + " / " + str(len(outputFileList)), key="-IMAGECOUNT-"), sg.Button("Next")]], size=(400, 36), relief=FLAT, element_justification="c"),
+            sg.Push(),
+            sg.Frame("", [[sg.Button("Exit")]], size=(200, 36), relief=FLAT, element_justification="r")],
             [sg.Text(fileOut)]]
 
-        return sg.Window("Sample Image Viewer", imageViewerLayout, size=(1400,fixed_height+80), element_justification="c")
+        return sg.Window("Sample Image Viewer", imageViewerLayout, size=(1400,fixed_height+100), element_justification="c")
 
     def make_window_ask_to_save():
         savePopupLayout = [[sg.Text(text="Would you like to save this sample?")],
@@ -131,7 +136,7 @@ def main():
         while True:
             # Get events and values from the window
             event, values = imageViewerWindow.read()
-            if event == sg.WIN_CLOSED:
+            if (event == sg.WIN_CLOSED) or (event == "Exit"):
                 imageViewerWindow.close()
                 ask_to_save()
 
