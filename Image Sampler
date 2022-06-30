@@ -9,6 +9,8 @@ import PySimpleGUI as sg
 from PIL import Image
 import random
 import sys
+import imquality.brisque as brisque
+import asyncio
 
 def main():
     # Set the theme
@@ -32,7 +34,7 @@ def main():
             sg.Push(),
             sg.Frame("", [[sg.Button("Prev"), sg.Text(str(imgNum+1) + " / " + str(len(outputFileList)), key="-IMAGECOUNT-"), sg.Button("Next")]], size=(400, 36), relief=FLAT, element_justification="c"),
             sg.Push(),
-            sg.Frame("", [[sg.Button("Exit")]], size=(200, 36), relief=FLAT, element_justification="r")],
+            sg.Frame("", [[sg.Button("Exit", size=(15, None))]], size=(200, 36), relief=FLAT, element_justification="r")],
             [sg.Text(fileOut)]]
 
         return sg.Window("Sample Image Viewer", imageViewerLayout, size=(1400,fixed_height+100), element_justification="c")
@@ -76,7 +78,7 @@ def main():
             imageViewerWindow["-IMAGECOUNT-"].update(str(imgNum+1) + " / " + str(len(outputFileList)))
 
         # Ask the user if they want to save or delete the samples
-        def ask_to_save():
+        def ask_to_save(end):
             # Create ask_to_save window
             savePopup = make_window_ask_to_save()
 
@@ -86,8 +88,10 @@ def main():
                 event, values = savePopup.read()
 
                 if event == sg.WIN_CLOSED:
-                    savePopup.close()
-                    sys.exit()
+                    if end:
+                        sys.exit()
+                    else:
+                        choose_collection_for_sample()
 
                 # If save is chosen, do nothing
                 if event == "Save":
@@ -137,8 +141,9 @@ def main():
             # Get events and values from the window
             event, values = imageViewerWindow.read()
             if (event == sg.WIN_CLOSED) or (event == "Exit"):
+                end = True
                 imageViewerWindow.close()
-                ask_to_save()
+                ask_to_save(end)
 
             if event == "Next":
                 if imgNum != len(outputFileList)-1:
@@ -149,6 +154,11 @@ def main():
                 if imgNum != 0:
                     imgNum -= 1
                     update_image()
+
+            if event == "Create Another Sample":
+                end = False
+                imageViewerWindow.close()
+                ask_to_save(end)
 
     # Runs the Collection Picker Window
     # Enter file input and output paths
@@ -205,11 +215,19 @@ def main():
 
                                 # Copy photos based on chance to create a sample
                                 if 100*random.random() <= chance:
-                                    if not os.path.exists(fileOut):
-                                        os.makedirs(fileOut)
                                     path=os.path.join(fileIn, collectionPhoto)
-                                    shutil.copy(path, fileOut)
-                                    photoIsCopied = True
+
+                                    # Get image quality score
+                                    # Low score is best
+                                    img = Image.open(path)
+                                    score = 1 # brisque.score(img)
+                                    print(score)
+                                    if score < 70:
+                                        if not os.path.exists(fileOut):
+                                            os.makedirs(fileOut)
+                                        shutil.copy(path, fileOut)
+                                        photoIsCopied = True
+                                        
                             else:
                                 sourceFileList.remove(collectionPhoto)
                         else:
