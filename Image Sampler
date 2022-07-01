@@ -10,38 +10,62 @@ from PIL import Image
 import random
 import sys
 import imquality.brisque as brisque
-import asyncio
 
 def main():
     # Set the theme
-    sg.theme("DarkAmber")
+    sg.theme("Dark")
 
     # Set accepted file types
     acceptedFileTypes = ["jpg", "png", "tiff", "tif"]
 
+    # sg.SetOptions(element_padding=(4, 4))
+
     # Create Collection Picker window
     def make_window_collection_picker():
-        sampleLayout = [[sg.Text("Source Folder Path"), sg.InputText(key="-INPUTPATH-"), sg.FolderBrowse(initial_folder="M:\\Library\\Library Units\\Archives\\Archives team")],
-            [sg.Text("Choose Percentage:"), sg.Slider(range=(1,100), default_value=1, size=(41, 15), orientation="horizontal", key="-SLIDER-")],
-            [sg.Button("Ok"), sg.Text("", key="-FILEINCOUNTER-", justification="right")]]
+        sampleLayout = [[sg.Frame("Choose a collection",[
+            [sg.Frame("", [[sg.Text("Source Folder Path: ")]], relief=FLAT, size=(135, 45)),
+                sg.Frame("", [[sg.InputText(size=(60, 15), key="-INPUTPATH-")]], relief=FLAT, size=(400, 45)),
+                sg.Frame("", [[sg.FolderBrowse(initial_folder="M:\\Library\\Library Units\\Archives\\Archives team", pad=((5, 3),(0, 3)), size=(7, None))]], relief=FLAT, size=(115, 45))
+                ],
+            [sg.Frame("", [[sg.Text("Choose Percentage: ")]], relief=FLAT, size=(135, 45)), 
+                sg.Frame("", [[sg.Slider(range=(1,100), default_value=1, size=(47, 15), orientation="horizontal", key="-SLIDER-")]], relief=FLAT, size=(400, 45))
+                ],
+            [sg.Frame("", [[sg.Button("Ok", pad=((8, 3), (5, 3)), size=(7, None))]], relief=FLAT, size=(115, 35)),
+                sg.Push(),
+                sg.Text("", key="-FILEINCOUNTER-"),
+                sg.Push(),
+                sg.Frame("", [[sg.Button("Exit", pad=((5, 8), (5, 3)), size=(7, None))]], relief=FLAT, element_justification="r" ,size=(115, 35))
+                ]], size=(650, 200))]]
+        
+        # [[
+        #     sg.Frame("Choose a collection", [
+        #         [sg.Frame("", [[sg.Text("Source Folder Path: "), sg.InputText(size=(60, 15), key="-INPUTPATH-")],
+        #             [sg.Text("Choose Percentage: "), sg.Slider(range=(1,100), default_value=1, size=(42, 15), orientation="horizontal", key="-SLIDER-")],
+        #             [sg.Button("Ok", size=(7, None))]], size=(550, 150)),
+        #         sg.Frame("", [[sg.FolderBrowse(initial_folder="M:\\Library\\Library Units\\Archives\\Archives team", size=(7, None))],
+        #             [sg.VPush()],
+        #             [sg.Button("Exit", size=(7, None), pad=((10, 0),(0,10)))]], size=(100, 170))
+        #         ]
+        #     ], size=(650, 180))
+        #     ]]
 
-        return sg.Window("Image Sampler", sampleLayout, finalize=True)
+        return sg.Window("Image Sampler", sampleLayout)
 
     # Create Collection Picker window
     def make_window_image_viewer(bio, imgNum, outputFileList, fixed_height, fileOut):
         imageViewerLayout = [[sg.Image(data=bio.getvalue(), key="-IMAGE-")],
-            [sg.Frame("", [[sg.Button("Create Another Sample")]], size=(200, 36), relief=FLAT, element_justification="l"),
+            [sg.Frame("", [[sg.Button("Create Another Sample", size=(18, None))]], size=(200, 36), relief=FLAT, element_justification="l"),
             sg.Push(),
-            sg.Frame("", [[sg.Button("Prev"), sg.Text(str(imgNum+1) + " / " + str(len(outputFileList)), key="-IMAGECOUNT-"), sg.Button("Next")]], size=(400, 36), relief=FLAT, element_justification="c"),
+            sg.Frame("", [[sg.Button("Prev", size=(7, None)), sg.Text(str(imgNum+1) + " / " + str(len(outputFileList)), key="-IMAGECOUNT-"), sg.Button("Next", size=(7, None))]], size=(400, 36), relief=FLAT, element_justification="c"),
             sg.Push(),
-            sg.Frame("", [[sg.Button("Exit", size=(15, None))]], size=(200, 36), relief=FLAT, element_justification="r")],
+            sg.Frame("", [[sg.Button("Exit", size=(18, None))]], size=(200, 36), relief=FLAT, element_justification="r")],
             [sg.Text(fileOut)]]
 
         return sg.Window("Sample Image Viewer", imageViewerLayout, size=(1400,fixed_height+100), element_justification="c")
 
     def make_window_ask_to_save():
         savePopupLayout = [[sg.Text(text="Would you like to save this sample?")],
-            [sg.Button("Save"), sg.Button("Delete")]]
+            [sg.Push(), sg.Button("Save", size=(7, None)), sg.Push(), sg.Button("Delete", size=(7, None)), sg.Push()]]
 
         return sg.Window("",savePopupLayout, element_justification="c", keep_on_top=True, modal=True)
 
