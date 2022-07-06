@@ -9,7 +9,12 @@ import PySimpleGUI as sg
 from PIL import Image
 import random
 import sys
-import imquality.brisque as brisque
+# import imquality.brisque as brisque
+import torch
+import piq
+from skimage.io import imread
+
+
 
 def main():
     # Set the theme
@@ -17,8 +22,6 @@ def main():
 
     # Set accepted file types
     acceptedFileTypes = ["jpg", "png", "tiff", "tif"]
-
-    # sg.SetOptions(element_padding=(4, 4))
 
     # Create Collection Picker window
     def make_window_collection_picker():
@@ -36,18 +39,6 @@ def main():
                 sg.Push(),
                 sg.Frame("", [[sg.Button("Exit", pad=((5, 8), (5, 3)), size=(7, None))]], relief=FLAT, element_justification="r" ,size=(115, 35))
                 ]], size=(650, 200))]]
-        
-        # [[
-        #     sg.Frame("Choose a collection", [
-        #         [sg.Frame("", [[sg.Text("Source Folder Path: "), sg.InputText(size=(60, 15), key="-INPUTPATH-")],
-        #             [sg.Text("Choose Percentage: "), sg.Slider(range=(1,100), default_value=1, size=(42, 15), orientation="horizontal", key="-SLIDER-")],
-        #             [sg.Button("Ok", size=(7, None))]], size=(550, 150)),
-        #         sg.Frame("", [[sg.FolderBrowse(initial_folder="M:\\Library\\Library Units\\Archives\\Archives team", size=(7, None))],
-        #             [sg.VPush()],
-        #             [sg.Button("Exit", size=(7, None), pad=((10, 0),(0,10)))]], size=(100, 170))
-        #         ]
-        #     ], size=(650, 180))
-        #     ]]
 
         return sg.Window("Image Sampler", sampleLayout)
 
@@ -61,7 +52,7 @@ def main():
             sg.Frame("", [[sg.Button("Exit", size=(18, None))]], size=(200, 36), relief=FLAT, element_justification="r")],
             [sg.Text(fileOut)]]
 
-        return sg.Window("Sample Image Viewer", imageViewerLayout, size=(1400,fixed_height+100), element_justification="c")
+        return sg.Window("Sample Image Viewer", imageViewerLayout, size=(1200,fixed_height+100), element_justification="c")
 
     def make_window_ask_to_save():
         savePopupLayout = [[sg.Text(text="Would you like to save this sample?")],
@@ -196,9 +187,6 @@ def main():
         while True:
             # Get events and values from the window
             event, values = collectionPickerWindow.read()
-    
-            # Initialize file counter for source read
-            fileInCount = 1
 
             if event == sg.WIN_CLOSED:
                 collectionPickerWindow.close()
@@ -225,37 +213,51 @@ def main():
                     # List of files in source folder
                     sourceFileList = os.listdir(fileIn)
 
-                    # Copy a sample from source folder to output folder
+                    # Initialize list to hold photo names for sample saving
+                    saveList = []
+
+                    # Initialize file counter for source read
+                    fileInCount = 0
+
+                    # Clean up the sourceFilList
                     for collectionPhoto in sourceFileList[:]:
                         # Get the extension of the file and check against acceptedFileTypes
                         if "." in collectionPhoto:
                             splitFileName = collectionPhoto.split(".")
                             ext = splitFileName[1]
-                            if (ext in acceptedFileTypes):
-                                # Update the file counter
-                                collectionPickerWindow["-FILEINCOUNTER-"].update(str(fileInCount) + " / " + str(len(sourceFileList)))
-                                collectionPickerWindow.refresh()
-                                fileInCount+=1
-
-                                # Copy photos based on chance to create a sample
-                                if 100*random.random() <= chance:
-                                    path=os.path.join(fileIn, collectionPhoto)
-
-                                    # Get image quality score
-                                    # Low score is best
-                                    img = Image.open(path)
-                                    score = 1 # brisque.score(img)
-                                    print(score)
-                                    if score < 70:
-                                        if not os.path.exists(fileOut):
-                                            os.makedirs(fileOut)
-                                        shutil.copy(path, fileOut)
-                                        photoIsCopied = True
-                                        
-                            else:
+                            if (ext not in acceptedFileTypes):
                                 sourceFileList.remove(collectionPhoto)
                         else:
                             sourceFileList.remove(collectionPhoto)
+
+                    # Get length for use when updating FILECOUNTER below
+                    sourceFileListLen = len(sourceFileList)
+
+                    # Copy a sample from source folder to output folder
+                    for collectionPhoto in sourceFileList:
+                        # Update the file counter
+                        collectionPickerWindow["-FILEINCOUNTER-"].update(str(fileInCount) + " / " + str(sourceFileListLen))
+                        collectionPickerWindow.refresh()
+                        fileInCount+=1
+
+                        # Copy photos based on chance to create a sample
+                        if 100*random.random() <= chance:
+                            path=os.path.join(fileIn, collectionPhoto)
+                            saveList.append(collectionPhoto)
+                            # Get image quality score
+                            # Low score is best
+                            # img = Image.open(path)
+                            # score = brisque.score(img)
+                            x = torch.tensor(imread(path)).permute(2, 0, 1)[None, ...] / 255.
+                            score = piq.brisque(x, data_range=1., reduction='none')
+                            print(score)
+                            if score < 70:
+                                if not os.path.exists(fileOut):
+                                    os.makedirs(fileOut)
+                                shutil.copy(path, fileOut)
+                                photoIsCopied = True
+
+                    print(saveList)
 
                     # If no photos were sampled, notify user
                     if not photoIsCopied:
