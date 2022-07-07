@@ -10,18 +10,17 @@ from PIL import Image
 import random
 import sys
 # import imquality.brisque as brisque
-import torch
-import piq
-from skimage.io import imread
-
-
+# import torch
+# import piq
+# from skimage.io import imread
+import cv2 as cv # Open Source Computer Vision (OpenCV)
 
 def main():
     # Set the theme
     sg.theme("Dark")
 
     # Set accepted file types
-    acceptedFileTypes = ["jpg", "png", "tiff", "tif"]
+    acceptedFileTypes = ["jpg", "png", "bmp", "tiff", "tif"]
 
     # Create Collection Picker window
     def make_window_collection_picker():
@@ -38,7 +37,7 @@ def main():
                 sg.Text("", key="-FILEINCOUNTER-"),
                 sg.Push(),
                 sg.Frame("", [[sg.Button("Exit", pad=((5, 8), (5, 3)), size=(7, None))]], relief=FLAT, element_justification="r" ,size=(115, 35))
-                ]], size=(650, 200))]]
+                ]], size=(650, 170))]]
 
         return sg.Window("Image Sampler", sampleLayout)
 
@@ -248,16 +247,19 @@ def main():
                             # Low score is best
                             # img = Image.open(path)
                             # score = brisque.score(img)
-                            x = torch.tensor(imread(path)).permute(2, 0, 1)[None, ...] / 255.
-                            score = piq.brisque(x, data_range=1., reduction='none')
-                            print(score)
-                            if score < 70:
+                            # x = torch.tensor(imread(path)).permute(2, 0, 1)[None, ...] / 255.
+                            # score = piq.brisque(x, data_range=1., reduction='none')
+                            img = cv.imread(path)
+                            grey = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+                            blurScore = cv.Laplacian(grey, cv.CV_64F).var()
+                            # brisqueScore = cv.quality.QualityBRISQUE.compute()
+                            print(collectionPhoto + ": Blur = " + str(blurScore))
+                            #  + " Brisque= " + str(brisqueScore))
+                            if blurScore > 30:
                                 if not os.path.exists(fileOut):
                                     os.makedirs(fileOut)
                                 shutil.copy(path, fileOut)
                                 photoIsCopied = True
-
-                    print(saveList)
 
                     # If no photos were sampled, notify user
                     if not photoIsCopied:
