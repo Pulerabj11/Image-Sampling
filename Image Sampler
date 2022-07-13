@@ -9,7 +9,6 @@ import PySimpleGUI as sg
 from PIL import Image
 import random
 import sys
-# import imquality.brisque as brisque
 import torch
 import piq
 from skimage.io import imread
@@ -232,6 +231,8 @@ def main():
                     # Get length for use when updating FILECOUNTER below
                     sourceFileListLen = len(sourceFileList)
 
+                    acceptedBrisqueScores = []
+                    unacceptedBrisqueScores = []
                     # Copy a sample from source folder to output folder
                     for collectionPhoto in sourceFileList:
                         # Update the file counter
@@ -243,24 +244,31 @@ def main():
                         if 100*random.random() <= chance:
                             path=os.path.join(fileIn, collectionPhoto)
                             saveList.append(collectionPhoto)
-                            # Get image quality score
-                            # Low score is best
-                            # img = Image.open(path)
-                            # score = brisque.score(img)
-                            # x = torch.tensor(imread(path)).permute(2, 0, 1)[None, ...] / 255.
-                            # brisqueScore = piq.brisque(x, data_range=1., reduction='none')
+
+                            # Get image quality score (BRISQUE method)
+                            # BRISQUE values typically range between 0 (Very good quality) and 150 (very bad quality).
+                            # Some clean images may show high BRISQUE values based on the nature of the image.
+                            x = torch.tensor(imread(path)).permute(2, 0, 1)[None, ...] / 255.
+                            brisqueScore = piq.brisque(x, data_range=1., reduction='none')
+
+                            # Get blur score.  Low score == blurry
                             img = cv.imread(path)
                             grey = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
                             blurScore = cv.Laplacian(grey, cv.CV_64F).var()
-                            brisqueScore = cv.quality.QualityBRISQUE.compute(img)
-                            print(collectionPhoto + ": Blur = " + str(blurScore))
-                            #  + " Brisque= " + str(brisqueScore))
+
+                            print(collectionPhoto + ": (Blur = " + str(blurScore) + ")  (Brisque = " + str(brisqueScore.item()) + ")")
                             if blurScore > 30:
                                 if not os.path.exists(fileOut):
                                     os.makedirs(fileOut)
                                 shutil.copy(path, fileOut)
                                 photoIsCopied = True
-
+                                acceptedBrisqueScores.append(brisqueScore.item())
+                            else: unacceptedBrisqueScores.append(brisqueScore.item())
+                    print("Brisque Scores")
+                    print("Accepted: ", acceptedBrisqueScores)
+                    print("         Avg: ", sum(acceptedBrisqueScores)/len(acceptedBrisqueScores))
+                    print("Unaccepted:", unacceptedBrisqueScores)
+                    print("         Avg: ", sum(unacceptedBrisqueScores)/len(unacceptedBrisqueScores))
                     # If no photos were sampled, notify user
                     if not photoIsCopied:
                         sg.popup("Sample is too small! Try a larger percentage.", keep_on_top=True, modal=True)
