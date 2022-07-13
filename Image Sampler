@@ -11,15 +11,15 @@ import random
 import sys
 import torch
 import piq
-from skimage.io import imread
 import cv2 as cv # Open Source Computer Vision (OpenCV)
+import matplotlib.pyplot as plt
 
 def main():
     # Set the theme
     sg.theme("Dark")
 
     # Set accepted file types
-    acceptedFileTypes = ["jpg", "png", "bmp", "tiff", "tif"]
+    acceptedFileTypes = ["jpg", "JPG", "png", "PNG", "bmp", "BMP", "tiff", "TIFF", "tif", "TIF"]
 
     # Create Collection Picker window
     def make_window_collection_picker():
@@ -231,8 +231,11 @@ def main():
                     # Get length for use when updating FILECOUNTER below
                     sourceFileListLen = len(sourceFileList)
 
+                    print(sourceFileList)
                     acceptedBrisqueScores = []
                     unacceptedBrisqueScores = []
+                    blurArray = []
+                    
                     # Copy a sample from source folder to output folder
                     for collectionPhoto in sourceFileList:
                         # Update the file counter
@@ -248,7 +251,7 @@ def main():
                             # Get image quality score (BRISQUE method)
                             # BRISQUE values typically range between 0 (Very good quality) and 150 (very bad quality).
                             # Some clean images may show high BRISQUE values based on the nature of the image.
-                            x = torch.tensor(imread(path)).permute(2, 0, 1)[None, ...] / 255.
+                            x = torch.tensor(cv.imread(path)).permute(2, 0, 1)[None, ...] / 255.
                             brisqueScore = piq.brisque(x, data_range=1., reduction='none')
 
                             # Get blur score.  Low score == blurry
@@ -263,12 +266,19 @@ def main():
                                 shutil.copy(path, fileOut)
                                 photoIsCopied = True
                                 acceptedBrisqueScores.append(brisqueScore.item())
+                                blurArray.append(blurScore)
                             else: unacceptedBrisqueScores.append(brisqueScore.item())
                     print("Brisque Scores")
                     print("Accepted: ", acceptedBrisqueScores)
                     print("         Avg: ", sum(acceptedBrisqueScores)/len(acceptedBrisqueScores))
-                    print("Unaccepted:", unacceptedBrisqueScores)
-                    print("         Avg: ", sum(unacceptedBrisqueScores)/len(unacceptedBrisqueScores))
+                    if (len(unacceptedBrisqueScores) > 0):
+                        print("Unaccepted:", unacceptedBrisqueScores)
+                        print("         Avg: ", sum(unacceptedBrisqueScores)/len(unacceptedBrisqueScores))
+                    plt.xlabel('Brisque')
+                    plt.ylabel('Blur')
+                    plt.plot(acceptedBrisqueScores, blurArray)
+                    plt.show()
+                    
                     # If no photos were sampled, notify user
                     if not photoIsCopied:
                         sg.popup("Sample is too small! Try a larger percentage.", keep_on_top=True, modal=True)
