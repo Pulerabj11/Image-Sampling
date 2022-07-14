@@ -90,7 +90,6 @@ def main():
                 ext = splitFileName[1]
                 if (ext == ('tiff' or 'TIFF')):
                     image = Image.open(imgFilepath)
-                    image.save(fileOut + '\\' + splitFileName[0] + 'jpg')
                     image = cv.resize(image, [calculate_width(image), fixed_height])
                     # image = TIFF.open(imgFilepath)
                 else:
