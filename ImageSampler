@@ -1,5 +1,3 @@
-#1 sample files and move to new location
-from calendar import c
 import os
 import stat
 import io
@@ -14,7 +12,7 @@ import piq
 import cv2 as cv # Open Source Computer Vision (OpenCV)
 import matplotlib.pyplot as plt
 import logging
-from libtiff import TIFF
+# from libtiff import TIFF
 
 def main():
     # Set the theme
@@ -40,7 +38,7 @@ def main():
                 sg.Frame("", [[sg.Button("Exit", pad=((5, 8), (5, 3)), size=(7, None))]], relief=FLAT, element_justification="r" ,size=(115, 35))
                 ]], size=(650, 170))]]
 
-        return sg.Window("Image Sampler", sampleLayout)
+        return sg.Window("Image Sampler", sampleLayout, use_default_focus=False)
 
     # Create Collection Picker window
     def make_window_image_viewer(bio, imgNum, outputFileList, fixed_height, fileOut):
@@ -50,15 +48,15 @@ def main():
             sg.Frame("", [[sg.Button("Prev", size=(7, None)), sg.Text(str(imgNum+1) + " / " + str(len(outputFileList)), key="-IMAGECOUNT-"), sg.Button("Next", size=(7, None))]], size=(400, 36), relief=FLAT, element_justification="c"),
             sg.Push(),
             sg.Frame("", [[sg.Button("Exit", size=(18, None))]], size=(200, 36), relief=FLAT, element_justification="r")],
-            [sg.Text(fileOut)]]
+            [sg.Text(fileOut + "\\" + outputFileList[imgNum], key="-FILE-")]]
 
-        return sg.Window("Sample Image Viewer", imageViewerLayout, size=(1200,fixed_height+100), element_justification="c")
+        return sg.Window("Sample Image Viewer", imageViewerLayout, size=(1200,fixed_height+100), element_justification="c", use_default_focus=False)
 
     def make_window_ask_to_save():
         savePopupLayout = [[sg.Text(text="Would you like to save this sample?")],
             [sg.Push(), sg.Button("Save", size=(7, None)), sg.Push(), sg.Button("Delete", size=(7, None)), sg.Push()]]
 
-        return sg.Window("",savePopupLayout, element_justification="c", keep_on_top=True, modal=True)
+        return sg.Window("",savePopupLayout, element_justification="c", keep_on_top=True, modal=True, use_default_focus=False)
 
     # Runs the image viewer
     # Browse the sampled images
@@ -67,49 +65,25 @@ def main():
 
         # Get the image from the list of files in the sample.  Save it to memory.
         def get_image():
-            print('GET_IMAGE')
             # Set image from photos
             imgFilename = outputFileList[imgNum]
             imgFilepath = fileOut + "\\" + imgFilename
             try:
-                # Handle files set as 'Read-only'
-                if not os.access(imgFilepath, os.R_OK):                                
-                    # os.chmod(imgFilepath, stat.S_IREAD)
+                # Resize the image
+                image = Image.open(imgFilepath)
+                image = image.resize([calculate_width(image), fixed_height])
 
-                    # Checking access with os.R_OK
-                    path2 = os.access(imgFilepath, os.R_OK)
-                    print(imgFilepath, " Access to read the file: ", path2)
-
-                    # Checking access with os.W_OK
-                    path3 = os.access(imgFilepath, os.W_OK)
-                    print(imgFilepath, " Access to write the file: ", path3)
-                print('GET_IMAGE2')
-
-                # Get the extension of the file and check against acceptedFileTypes
-                splitFileName = imgFilename.split(".")
-                ext = splitFileName[1]
-                if (ext == ('tiff' or 'TIFF')):
-                    image = Image.open(imgFilepath)
-                    image = cv.resize(image, [calculate_width(image), fixed_height])
-                    # image = TIFF.open(imgFilepath)
-                else:
-                    image = Image.open(imgFilepath)
-                    image = image.resize([calculate_width(image), fixed_height], Image.ANTIALIAS) 
-
-                print('GET_IMAGE3')
-                
-                print('GET_IMAGE4')
+                # Save image to memory
                 bio = io.BytesIO()
-                print('GET_IMAGE5')
                 image.save(bio, format="PNG")
-                print('GET_IMAGE6')
+
                 return bio
             except Exception as e:
                 print(e)
                 sg.popup("Error: A non-image file made it into the sample.")
                 sys.exit()
 
-        # Calculate the width size based on resizing to a fixed height
+        # Calculate the width based on a fixed height
         def calculate_width(image):
             height_percent = (fixed_height / float(image.size[1]))
             width_size = int((float(image.size[0]) * float(height_percent)))
@@ -117,10 +91,11 @@ def main():
         
         # When Prev or Next buttons are clicked, update the image and file counter
         def update_image():
+            # Get a reference to image saved in memory
             bio = get_image()
             imageViewerWindow["-IMAGE-"].update(data=bio.getvalue())
             imageViewerWindow["-IMAGECOUNT-"].update(str(imgNum+1) + " / " + str(len(outputFileList)))
-            print('GET_IMAGE4')
+            imageViewerWindow["-FILE-"].update(fileOut + "\\" + outputFileList[imgNum])
 
         # Ask the user if they want to save or delete the samples
         def ask_to_save(end):
@@ -147,12 +122,7 @@ def main():
                     for file in outputFileList:
                         filepath = fileOut + "\\" + file
                         if os.path.exists(filepath):
-                            # Handle files set as 'Read-only'
-                            if os.access(filepath, os.W_OK):                                
-                                os.remove(filepath)
-                            else:
-                                os.chmod(filepath, stat.S_IWRITE)
-                                os.remove(filepath)
+                            os.remove(filepath)
                     if os.path.isdir(fileOut):
                         os.rmdir(fileOut)
                     savePopup.close()
@@ -174,9 +144,10 @@ def main():
             if (ext not in acceptedFileTypes):
                 outputFileList.remove(samplePhoto)
 
+        # Get a reference to image saved in memory
         bio = get_image()
-        print('GET_IMAGE5')
 
+        # Fix formatting
         fileOut = fileOut.replace("\\\\", "\\")
         fileOut = fileOut.replace("/", "\\")
 
@@ -187,10 +158,13 @@ def main():
             # Get events and values from the window
             event, values = imageViewerWindow.read()
             if (event == sg.WIN_CLOSED) or (event == "Exit"):
+                # End indicates whether to quit after saving
                 end = True
                 imageViewerWindow.close()
+                # Ask user to save or delete the sample
                 ask_to_save(end)
 
+            # Move through next/prev images in sample
             if event == "Next":
                 if imgNum != len(outputFileList)-1:
                     imgNum += 1
@@ -202,6 +176,7 @@ def main():
                     update_image()
 
             if event == "Create Another Sample":
+                # End indicates whether to quit after saving
                 end = False
                 imageViewerWindow.close()
                 ask_to_save(end)
@@ -264,7 +239,6 @@ def main():
                     # Get length for use when updating FILECOUNTER below
                     sourceFileListLen = len(sourceFileList)
 
-                    print(sourceFileList)
                     acceptedBrisqueScores = []
                     unacceptedBrisqueScores = []
                     blurArray = []
@@ -284,47 +258,39 @@ def main():
                             # Get image quality score (BRISQUE method)
                             # BRISQUE values typically range between 0 (Very good quality) and 150 (very bad quality).
                             # Some clean images may show high BRISQUE values based on the nature of the image.
-                            # x = torch.tensor(cv.imread(path)).permute(2, 0, 1)[None, ...] / 255.
-                            # brisqueScore = piq.brisque(x, data_range=1., reduction='none')
+                            x = torch.tensor(cv.imread(path)).permute(2, 0, 1)[None, ...] / 255.
+                            brisqueScore = piq.brisque(x, data_range=1., reduction='none')
 
                             # Get blur score.  Low score == blurry
                             img = cv.imread(path)
                             grey = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
                             blurScore = cv.Laplacian(grey, cv.CV_64F).var()
 
-                            print(collectionPhoto + ": (Blur = " + str(blurScore))
-                            #  + ") + (Brisque = " + str(brisqueScore.item()) + ")")
-                            if blurScore > 30:
+                            print(collectionPhoto + ": (Blur = " + str(blurScore)  + ") + (Brisque = " + str(brisqueScore.item()) + ")")
+
+                            if blurScore > 35:
 
                                 # Handle files set as 'Read-only'
                                 if not os.access(path, os.W_OK):                                
                                     os.chmod(path, stat.S_IWRITE)
 
-                                # Checking access with os.R_OK
-                                path2 = os.access(path, os.R_OK)
-                                print(path, " Access to read the file: ", path2)
-
-                                # Checking access with os.W_OK
-                                path3 = os.access(path, os.W_OK)
-                                print(path, " Access to write the file: ", path3)
-
                                 if not os.path.exists(fileOut):
                                     os.makedirs(fileOut)
                                 shutil.copy(path, fileOut)
                                 photoIsCopied = True
-                                # acceptedBrisqueScores.append(brisqueScore.item())
+                                acceptedBrisqueScores.append(brisqueScore.item())
                                 blurArray.append(blurScore)
-                            # else: unacceptedBrisqueScores.append(brisqueScore.item())
-                    # print("Brisque Scores")
-                    # print("Accepted: ", acceptedBrisqueScores)
-                    # print("         Avg: ", sum(acceptedBrisqueScores)/len(acceptedBrisqueScores))
-                    # if (len(unacceptedBrisqueScores) > 0):
-                    #     print("Unaccepted:", unacceptedBrisqueScores)
-                    #     print("         Avg: ", sum(unacceptedBrisqueScores)/len(unacceptedBrisqueScores))
-                    # plt.xlabel('Brisque')
-                    # plt.ylabel('Blur')
-                    # plt.plot(acceptedBrisqueScores, blurArray)
-                    # plt.show()
+                            else: unacceptedBrisqueScores.append(brisqueScore.item())
+                    print("Brisque Scores")
+                    print("Accepted: ", acceptedBrisqueScores)
+                    print("         AVG: ", sum(acceptedBrisqueScores)/len(acceptedBrisqueScores))
+                    print("         MAX: ", max(acceptedBrisqueScores))
+                    print("         MIN: ", min(acceptedBrisqueScores))
+                    if (len(unacceptedBrisqueScores) > 0):
+                        print("Unaccepted:", unacceptedBrisqueScores)
+                        print("         AVG: ", sum(unacceptedBrisqueScores)/len(unacceptedBrisqueScores))
+                        print("         MAX: ", max(unacceptedBrisqueScores))
+                        print("         MIN: ", min(unacceptedBrisqueScores))
                     
                     # If no photos were sampled, notify user
                     if not photoIsCopied:
