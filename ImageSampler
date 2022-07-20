@@ -10,8 +10,6 @@ import sys
 import torch
 import piq
 import cv2 as cv # Open Source Computer Vision (OpenCV)
-import matplotlib.pyplot as plt
-import logging
 # from libtiff import TIFF
 
 def main():
@@ -33,22 +31,26 @@ def main():
                 ],
             [sg.Frame("", [[sg.Button("Ok", pad=((8, 3), (5, 3)), size=(7, None))]], relief=FLAT, size=(115, 35)),
                 sg.Push(),
-                sg.Text("", key="-FILEINCOUNTER-"),
+                sg.Radio("Slow", group_id="-SPEEDRADIO-", key="-SLOWRADIO-", default=True),
+                sg.Text("", key="-FILEINCOUNTER-", size=(8, None), pad=((18,3), (5,3))),
+                sg.Radio("Fast", group_id="-SPEEDRADIO-", key="-FASTRADIO-"),
                 sg.Push(),
                 sg.Frame("", [[sg.Button("Exit", pad=((5, 8), (5, 3)), size=(7, None))]], relief=FLAT, element_justification="r" ,size=(115, 35))
-                ]], size=(650, 170))]]
+                ]], size=(650, 200))]]
 
         return sg.Window("Image Sampler", sampleLayout, use_default_focus=False)
 
     # Create Collection Picker window
     def make_window_image_viewer(bio, imgNum, outputFileList, fixed_height, fileOut):
         imageViewerLayout = [[sg.Image(data=bio.getvalue(), key="-IMAGE-")],
+            [sg.Text(fileOut + "\\" + outputFileList[imgNum], key="-FILE-")],
             [sg.Frame("", [[sg.Button("Create Another Sample", size=(18, None))]], size=(200, 36), relief=FLAT, element_justification="l"),
-            sg.Push(),
-            sg.Frame("", [[sg.Button("Prev", size=(7, None)), sg.Text(str(imgNum+1) + " / " + str(len(outputFileList)), key="-IMAGECOUNT-"), sg.Button("Next", size=(7, None))]], size=(400, 36), relief=FLAT, element_justification="c"),
-            sg.Push(),
-            sg.Frame("", [[sg.Button("Exit", size=(18, None))]], size=(200, 36), relief=FLAT, element_justification="r")],
-            [sg.Text(fileOut + "\\" + outputFileList[imgNum], key="-FILE-")]]
+                sg.Push(),
+                sg.Frame("", [[sg.Button("Prev", size=(7, None)),
+                    sg.Text(str(imgNum+1) + " / " + str(len(outputFileList)), key="-IMAGECOUNT-", size=(8, None), pad=((22,3),(5,3))),
+                    sg.Button("Next", size=(7, None))]], size=(400, 36), relief=FLAT, element_justification="c"),
+                sg.Push(),
+                sg.Frame("", [[sg.Button("Exit", size=(18, None))]], size=(200, 36), relief=FLAT, element_justification="r")]]
 
         return sg.Window("Sample Image Viewer", imageViewerLayout, size=(1200,fixed_height+100), element_justification="c", use_default_focus=False)
 
@@ -182,7 +184,7 @@ def main():
                 ask_to_save(end)
 
     # Runs the Collection Picker Window
-    # Enter file input and output paths
+    # Enter file input path
     # Pick a percentage for the sample of a collection
     def choose_collection_for_sample():
 
@@ -225,6 +227,9 @@ def main():
                     # Initialize file counter for source read
                     fileInCount = 0
 
+                    # Slow setting picked.  Brisque scoring is ignored.
+                    isSlow = values["-SLOWRADIO-"]
+
                     # Clean up the sourceFilList
                     for collectionPhoto in sourceFileList[:]:
                         # Get the extension of the file and check against acceptedFileTypes
@@ -239,6 +244,7 @@ def main():
                     # Get length for use when updating FILECOUNTER below
                     sourceFileListLen = len(sourceFileList)
 
+                    # TESTING
                     acceptedBrisqueScores = []
                     unacceptedBrisqueScores = []
                     blurArray = []
@@ -258,8 +264,9 @@ def main():
                             # Get image quality score (BRISQUE method)
                             # BRISQUE values typically range between 0 (Very good quality) and 150 (very bad quality).
                             # Some clean images may show high BRISQUE values based on the nature of the image.
-                            x = torch.tensor(cv.imread(path)).permute(2, 0, 1)[None, ...] / 255.
-                            brisqueScore = piq.brisque(x, data_range=1., reduction='none')
+                            if isSlow:
+                                x = torch.tensor(cv.imread(path)).permute(2, 0, 1)[None, ...] / 255.
+                                brisqueScore = piq.brisque(x, data_range=1., reduction='none')
 
                             # Get blur score.  Low score == blurry
                             img = cv.imread(path)
@@ -268,19 +275,38 @@ def main():
 
                             print(collectionPhoto + ": (Blur = " + str(blurScore)  + ") + (Brisque = " + str(brisqueScore.item()) + ")")
 
-                            if blurScore > 35:
+                            if (isSlow):
+                                # Slow run
+                                # If blurScore and brisqueScore is acceptable, copy photo to sample
+                                if (blurScore > 35 and brisqueScore < 70):
+                                    # Handle files set as 'Read-only'
+                                    if not os.access(path, os.W_OK):                                
+                                        os.chmod(path, stat.S_IWRITE)
 
-                                # Handle files set as 'Read-only'
-                                if not os.access(path, os.W_OK):                                
-                                    os.chmod(path, stat.S_IWRITE)
+                                    if not os.path.exists(fileOut):
+                                        os.makedirs(fileOut)
+                                    shutil.copy(path, fileOut)
+                                    photoIsCopied = True
+                                                                    # TESTING
+                                    if blurScore < 100:
+                                        acceptedBrisqueScores.append(brisqueScore.item())
+                                        blurArray.append(blurScore)
+                                    else: unacceptedBrisqueScores.append(brisqueScore.item())
+                            else:
+                                # Fast run
+                                # is blurScore is acceptable, copy photo to sample
+                                if (blurScore > 35):
+                                    # Handle files set as 'Read-only'
+                                    if not os.access(path, os.W_OK):                                
+                                        os.chmod(path, stat.S_IWRITE)
 
-                                if not os.path.exists(fileOut):
-                                    os.makedirs(fileOut)
-                                shutil.copy(path, fileOut)
-                                photoIsCopied = True
-                                acceptedBrisqueScores.append(brisqueScore.item())
-                                blurArray.append(blurScore)
-                            else: unacceptedBrisqueScores.append(brisqueScore.item())
+                                    if not os.path.exists(fileOut):
+                                        os.makedirs(fileOut)
+                                    shutil.copy(path, fileOut)
+                                    photoIsCopied = True
+
+
+
                     print("Brisque Scores")
                     print("Accepted: ", acceptedBrisqueScores)
                     print("         AVG: ", sum(acceptedBrisqueScores)/len(acceptedBrisqueScores))
@@ -300,8 +326,6 @@ def main():
                         # Open Image Viewer window
                         view_sample_images(fileOut)
 
-
-    logging.basicConfig(filename='M:\Library\Library Units\Archives\Archives team\Brandon\TEST PHOTOS\example.log', filemode='w', level=logging.DEBUG)
     # Call func to open window for choosing a collection
     choose_collection_for_sample()
 
