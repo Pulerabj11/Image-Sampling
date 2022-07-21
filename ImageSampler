@@ -221,9 +221,6 @@ def main():
                     # List of files in source folder
                     sourceFileList = os.listdir(fileIn)
 
-                    # Initialize list to hold photo names for sample saving
-                    saveList = []
-
                     # Initialize file counter for source read
                     fileInCount = 0
 
@@ -241,14 +238,17 @@ def main():
                         else:
                             sourceFileList.remove(collectionPhoto)
 
-                    # Get length for use when updating FILECOUNTER below
+                    # Get length for use when updating FILECOUNTER
                     sourceFileListLen = len(sourceFileList)
 
+                    # Initialize list to hold names of photos picked for the sample
+                    sampleToSave = []
+
                     # TESTING
-                    acceptedBrisqueScores = []
-                    unacceptedBrisqueScores = []
-                    blurArray = []
-                    
+                    # acceptedBrisqueScores = []
+                    # unacceptedBrisqueScores = []
+                    # blurArray = []
+
                     # Copy a sample from source folder to output folder
                     for collectionPhoto in sourceFileList:
                         # Update the file counter
@@ -259,41 +259,47 @@ def main():
                         # Copy photos based on chance to create a sample
                         if 100*random.random() <= chance:
                             path=os.path.join(fileIn, collectionPhoto)
-                            saveList.append(collectionPhoto)
-
-                            # Get image quality score (BRISQUE method)
-                            # BRISQUE values typically range between 0 (Very good quality) and 150 (very bad quality).
-                            # Some clean images may show high BRISQUE values based on the nature of the image.
-                            if isSlow:
-                                x = torch.tensor(cv.imread(path)).permute(2, 0, 1)[None, ...] / 255.
-                                brisqueScore = piq.brisque(x, data_range=1., reduction='none')
+                            sampleToSave.append(collectionPhoto)
 
                             # Get blur score.  Low score == blurry
                             img = cv.imread(path)
                             grey = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
                             blurScore = cv.Laplacian(grey, cv.CV_64F).var()
 
-                            print(collectionPhoto + ": (Blur = " + str(blurScore)  + ") + (Brisque = " + str(brisqueScore.item()) + ")")
+                            # Testing (Use slow option)
+                            # print(collectionPhoto + ": (Blur = " + str(blurScore)  + ") + (Brisque = " + str(brisqueScore.item()) + ")")
 
+                            # Slow run
                             if (isSlow):
-                                # Slow run
+                                # Get image quality score (BRISQUE method)
+                                # BRISQUE values typically range between 0 (Very good quality) and 150 (very bad quality).
+                                # Some clean images may show high BRISQUE values based on the nature of the image.
+                                x = torch.tensor(cv.imread(path)).permute(2, 0, 1)[None, ...] / 255.
+                                brisqueScore = piq.brisque(x, data_range=1., reduction='none')
+
                                 # If blurScore and brisqueScore is acceptable, copy photo to sample
                                 if (blurScore > 35 and brisqueScore < 70):
                                     # Handle files set as 'Read-only'
                                     if not os.access(path, os.W_OK):                                
                                         os.chmod(path, stat.S_IWRITE)
 
+                                    # If sample folder does not exist, create it
                                     if not os.path.exists(fileOut):
                                         os.makedirs(fileOut)
+                                    # Copy photo from collection to sample folder
                                     shutil.copy(path, fileOut)
+                                    # Set photoIsCopied to true to indicate a sample now exists
                                     photoIsCopied = True
-                                                                    # TESTING
-                                    if blurScore < 100:
-                                        acceptedBrisqueScores.append(brisqueScore.item())
-                                        blurArray.append(blurScore)
-                                    else: unacceptedBrisqueScores.append(brisqueScore.item())
-                            else:
-                                # Fast run
+                                    # Add the photo name to a list in order to save a 
+                                    sampleToSave.append(collectionPhoto)
+
+                                    # TESTING (Use slow option)
+                                    # if blurScore < 50:
+                                    #     acceptedBrisqueScores.append(brisqueScore.item())
+                                    #     blurArray.append(blurScore)
+                                    # else: unacceptedBrisqueScores.append(brisqueScore.item())
+
+                            else: # Fast run
                                 # is blurScore is acceptable, copy photo to sample
                                 if (blurScore > 35):
                                     # Handle files set as 'Read-only'
@@ -304,19 +310,19 @@ def main():
                                         os.makedirs(fileOut)
                                     shutil.copy(path, fileOut)
                                     photoIsCopied = True
+                                    sampleToSave.append(collectionPhoto)
 
-
-
-                    print("Brisque Scores")
-                    print("Accepted: ", acceptedBrisqueScores)
-                    print("         AVG: ", sum(acceptedBrisqueScores)/len(acceptedBrisqueScores))
-                    print("         MAX: ", max(acceptedBrisqueScores))
-                    print("         MIN: ", min(acceptedBrisqueScores))
-                    if (len(unacceptedBrisqueScores) > 0):
-                        print("Unaccepted:", unacceptedBrisqueScores)
-                        print("         AVG: ", sum(unacceptedBrisqueScores)/len(unacceptedBrisqueScores))
-                        print("         MAX: ", max(unacceptedBrisqueScores))
-                        print("         MIN: ", min(unacceptedBrisqueScores))
+                    # Testing (Use slow option)
+                    # print("Brisque Scores")
+                    # print("Accepted: ", acceptedBrisqueScores)
+                    # print("         AVG: ", sum(acceptedBrisqueScores)/len(acceptedBrisqueScores))
+                    # print("         MAX: ", max(acceptedBrisqueScores))
+                    # print("         MIN: ", min(acceptedBrisqueScores))
+                    # if (len(unacceptedBrisqueScores) > 0):
+                    #     print("Unaccepted:", unacceptedBrisqueScores)
+                    #     print("         AVG: ", sum(unacceptedBrisqueScores)/len(unacceptedBrisqueScores))
+                    #     print("         MAX: ", max(unacceptedBrisqueScores))
+                    #     print("         MIN: ", min(unacceptedBrisqueScores))
                     
                     # If no photos were sampled, notify user
                     if not photoIsCopied:
