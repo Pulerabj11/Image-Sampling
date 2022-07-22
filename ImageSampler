@@ -21,7 +21,7 @@ def main():
     acceptedFileTypes = ["jpg", "JPG", "png", "PNG", "bmp", "BMP", "tiff", "TIFF", "tif", "TIF"]
 
     # Holds each sample saved by user
-    globalSaveDict = {"sample": {}}
+    globalSaveDict = {"sample": ['2185550-R1-011-4.jpg', '2185550-R1-031-14.jpg']}
 
     # Create choose_collection_for_sample window
     def make_window_collection_picker():
@@ -42,48 +42,46 @@ def main():
                 sg.Frame("", [[sg.Button("Exit", pad=((5, 8), (5, 3)), size=(7, None))]], relief=FLAT, element_justification="r" ,size=(115, 35))
                 ]], size=(650, 200))]
         ]
-
         return sg.Window("Image Sampler", sampleLayout, use_default_focus=False)
 
     # Create view_sample_images window
     def make_window_image_viewer(bio, imgNum, sampledPhotos, fixed_height, fileIn):
-        imageViewerLayout = [[sg.Image(data=bio.getvalue(), key="-IMAGE-")],
-            [sg.Text(fileIn + "\\" + sampledPhotos[imgNum], key="-FILE-")],
-            [sg.Frame("", [[sg.Button("Create Another Sample", size=(18, None))]], size=(200, 36), relief=FLAT, element_justification="l"),
-                sg.Push(),
-                sg.Frame("", [[sg.Button("Prev", size=(7, None)),
-                    sg.Text(str(imgNum+1) + " / " + str(len(sampledPhotos)), key="-IMAGECOUNT-", size=(8, None), pad=((22,3),(5,3))),
-                    sg.Button("Next", size=(7, None))]], size=(400, 36), relief=FLAT, element_justification="c"),
-                sg.Push(),
-                sg.Frame("", [[sg.Button("Exit", size=(18, None))]], size=(200, 36), relief=FLAT, element_justification="r")]
+        imageViewerLayout = [
+            [sg.Column([
+                [sg.Image(data=bio.getvalue(), key="-IMAGE-")],
+                [sg.Text(fileIn + "\\" + sampledPhotos[imgNum], key="-FILE-")],
+                [sg.Frame("", [[sg.Button("Create Another Sample", size=(18, None))]], size=(200, 36), relief=FLAT, element_justification="l"),
+                    sg.Push(),
+                    sg.Frame("", [[sg.Button("Prev", size=(7, None)),
+                        sg.Text(str(imgNum+1) + " / " + str(len(sampledPhotos)), key="-IMAGECOUNT-", size=(8, None), pad=((22,3),(5,3))),
+                        sg.Button("Next", size=(7, None))]], size=(400, 36), relief=FLAT, element_justification="c"),
+                    sg.Push(),
+                    sg.Frame("", [[sg.Button("Exit", size=(18, None))]], size=(200, 36), relief=FLAT, element_justification="r")]]),
+            sg.Column([[sg.Listbox(values=list(globalSaveDict), enable_events=True, select_mode="LISTBOX_SELECT_MODE_SINGLE", key="-SAMPLESLISTBOX-", default_values="Current Sample", size=(100, 100))]])]
         ]
-
         return sg.Window("Sample Image Viewer", imageViewerLayout, size=(1200,fixed_height+100), element_justification="c", use_default_focus=False)
 
     # Create ask_to_save window
     def make_window_ask_to_save():
-        savePopupLayout = [[sg.Text(text="Would you like to save this sample?")],
-            [sg.Push(), sg.Button("Save", size=(7, None)), sg.Push(), sg.Button("Delete", size=(7, None)), sg.Push()]
+        askToSaveLayout = [[[sg.Text(text="Would you like to save a sample?")],
+            [sg.Push(), sg.Button("Yes", size=(7, None)), sg.Push(), sg.Button("No", size=(7, None)), sg.Push()]]
         ]
-
-        return sg.Window("",savePopupLayout, element_justification="c", keep_on_top=True, modal=True, use_default_focus=False)
+        return sg.Window("",askToSaveLayout, element_justification="c", keep_on_top=True, modal=True, use_default_focus=False)
 
     # Create give_sample_name window
     def make_window_give_sample_name():
-        giveSampleNameLayout = [[sg.Text(text="Give the sample a name.")],
-            [sg.InputText(size=(60, 15), key="-SAMPLENAMEINPUT-"), sg.Button("Submit", size=(7, None))]
+        giveSampleNameLayout = [[[sg.Text(text="Give the sample a name.")],
+            [sg.InputText(size=(60, 15), key="-SAMPLENAMEINPUT-"), sg.Button("Submit", size=(7, None))]]
         ]
-
         return sg.Window("", giveSampleNameLayout, element_justification="c", keep_on_top=True, modal=True, use_default_focus=False)
 
     def make_window_pick_sample():
-        pickSampleLayout = [[sg.Listbox(values=list(globalSaveDict.keys), select_mode="LISTBOX_SELECT_MODE_SINGLE", key="-SAMPLESLISTBOX-")],
-            [sg.Button("Select", size=(7, None))]
+        pickSampleLayout = [[[sg.Listbox(values=list(globalSaveDict.keys), enable_events=True, select_mode="LISTBOX_SELECT_MODE_SINGLE", key="-XXXXXXX-")],
+            [sg.Button("Select", size=(7, None))]]
         ]
         return sg.Window("", pickSampleLayout, element_justification="l", keep_on_top=True, modal=True, use_default_focus=False)
 
     def saveSample():
-        # TO BE MOVED TO def ask_to_save() in def view_sample_images()
         # Handle files set as 'Read-only'
         if not os.access(path, os.W_OK):                                
             os.chmod(path, stat.S_IWRITE)
@@ -95,9 +93,6 @@ def main():
         # Copy photo from collection to sample folder
         shutil.copy(path, fileOut)
 
-        # Set photoIsCopied to true to indicate a sample now exists
-        photoIsCopied = True
-
     # Prompt user to pick one of the saved samples
     def pick_sample(save):
         # Create pick_sample window
@@ -107,7 +102,7 @@ def main():
         if save:
             pickSampleWindow["-SAMPLESLISTBOX-"].update(list(globalSaveDict.keys).append("Current Sample"))
 
-        # pick_sample event loop
+####### pick_sample event loop
         while True:
             # Get events and values from the window
             event, values = pickSampleWindow.read()
@@ -136,12 +131,12 @@ def main():
     # Runs the image viewer
     # Browse the sampled images
     # Save or delete the samples
-    def view_sample_images(fileIn, fileOut, sampledPhotos):
+    def view_sample_images(fileIn):
 
         # Get the image from the list of files in the sample.  Save it to memory.
         def get_image():
-            # Set image from photos
-            imgFilename = sampledPhotos[imgNum]
+            # Set image from sampledPhotos
+            imgFilename = photosList[imgNum]
             imgFilepath = fileIn + "\\" + imgFilename
             try:
                 # Resize the image
@@ -169,73 +164,51 @@ def main():
             # Get a reference to image saved in memory
             bio = get_image()
             imageViewerWindow["-IMAGE-"].update(data=bio.getvalue())
-            imageViewerWindow["-IMAGECOUNT-"].update(str(imgNum+1) + " / " + str(len(outputFileList)))
-            imageViewerWindow["-FILE-"].update(fileOut + "\\" + outputFileList[imgNum])
+            imageViewerWindow["-IMAGECOUNT-"].update(str(imgNum+1) + " / " + str(len(photosList)))
+            imageViewerWindow["-FILE-"].update(fileIn + "\\" + photosList[imgNum])
 
-        def give_sample_name(end):
+        def give_sample_name():
             # Create give_sample_name window
             giveSampleNameWindow = make_window_give_sample_name()
-
-            # Set the input to a default sample name
-            giveSampleNameWindow["-SAMPLENAMEINPUT-"].update("Sample" + (len(globalSaveDict) + 1))
 
             # give_sample_name Event Loop
             while True:
                 event, values = giveSampleNameWindow.read()
-                # end=False: 'Create Another Sample' was chosen.
-                # end=True: 'Exit' was chosen
-                if end:
-                    print('HI')
-                else:
-                    if event == sg.WIN_CLOSED:
-                        quit()
 
-                    if event == "Submit":
-                        sampleName = values["-SAMPLENAMEINPUT-"]
-                        tempSaveDict = {"fileName": sampleName, "photos": sampledPhotos}
-                        globalSaveDict["sample"] = tempSaveDict
-                        giveSampleNameWindow.close()
-                        choose_collection_for_sample()
+                # Set the input to a default sample name
+                giveSampleNameWindow["-SAMPLENAMEINPUT-"].update("Sample" + str((len(globalSaveDict) + 1)))
 
-        # Ask the user if they want to save or delete the samples
-        def ask_to_save(end):
+                if event == sg.WIN_CLOSED:
+                    quit()
+
+                if event == "Submit":
+                    sampleName = values["-SAMPLENAMEINPUT-"]
+                    globalSaveDict[sampleName] = globalSaveDict.pop("Current Sample")
+                    giveSampleNameWindow.close()
+                    choose_collection_for_sample()
+
+        # Ask the user if they want to save a sample
+        def ask_to_save():
             # Create ask_to_save window
-            savePopup = make_window_ask_to_save()
+            askToSaveWindow = make_window_ask_to_save()
 
             # ask_to_save Event Loop
             while True:
                 # Get events and values from the window
-                event, values = savePopup.read()
+                event, values = askToSaveWindow.read()
 
-                # end=False: 'Create Another Sample' was chosen.
-                # end=True: 'Exit' was chosen
-                if end:
-                    if event == sg.WIN_CLOSED:
-                        sys.exit()
+                if event == sg.WIN_CLOSED:
+                    sys.exit()
 
-                    # If save is chosen,
-                    if event == "Save":
-                        save = True
-                        savePopup.close()
-                        pick_sample(save)
+                # If save is chosen,
+                if event == "Save":
+                    save = True
+                    askToSaveWindow.close()
+                    pick_sample(save)
 
-                    # If delete is chosen, 
-                    if event == "Delete":
-                        savePopup.close()
-
-                else: # 'Create Another Sample' was chosen
-                    if event == sg.WIN_CLOSED:
-                        quit()
-
-                    # If save is chosen, prompt user to give the sample a name.
-                    # It is saved to globalSaveDict
-                    if event == "Save":
-                        savePopup.close()
-                        give_sample_name(end)
-
-                    # If delete is chosen, current sample is not saved to globalSaveDict
-                    if event == "Delete":
-                        choose_collection_for_sample()
+                # If delete is chosen, 
+                if event == "Delete":
+                    askToSaveWindow.close()
 
         # Set index to 0 for first image in imageViewerWindow
         imgNum = 0
@@ -243,44 +216,51 @@ def main():
         # Image fixed height
         fixed_height = 600
 
+        # Get initial list of photos to populate the viewer
+        photosList = globalSaveDict.get("Current Sample")
+
         # Get a reference to image saved in memory
         bio = get_image()
 
         # Fix formatting
-        fileOut = fileOut.replace("\\\\", "\\")
-        fileOut = fileOut.replace("/", "\\")
+        # fileOut = fileOut.replace("\\\\", "\\")
+        # fileOut = fileOut.replace("/", "\\")
         fileIn = fileIn.replace("\\\\", "\\")
         fileIn = fileIn.replace("/", "\\")
 
         # Create Image Viewer window
-        imageViewerWindow = make_window_image_viewer(bio, imgNum, sampledPhotos, fixed_height, fileIn)
+        imageViewerWindow = make_window_image_viewer(bio, imgNum, photosList, fixed_height, fileIn)
+        samplesListBox = imageViewerWindow["-SAMPLESLISTBOX-"]
         # imageViewerWindow event loop
         while True:
             # Get events and values from the window
             event, values = imageViewerWindow.read()
             if (event == sg.WIN_CLOSED) or (event == "Exit"):
-                # End indicates whether to quit after saving
-                end = True
                 imageViewerWindow.close()
-                # Ask user to save or delete the sample
-                ask_to_save(end)
+                # Ask user to keep or delete the sample
+                ask_to_save()
 
             # Move through next/prev images in sample
-            if event == "Next":
-                if imgNum != len(sampledPhotos)-1:
-                    imgNum += 1
-                    update_image()
-
             if event == "Prev":
                 if imgNum != 0:
                     imgNum -= 1
                     update_image()
 
+            if event == "Next":
+                if imgNum != len(photosList)-1:
+                    imgNum += 1
+                    update_image()
+
+            # Move back to collectionPickerWindow
             if event == "Create Another Sample":
-                # End indicates whether to quit after saving
-                end = False
                 imageViewerWindow.close()
-                ask_to_save(end)
+                give_sample_name()
+
+            # If a sample is clicked in the list box, update the photosList to show that sample
+            if event == "-SAMPLESLISTBOX-":
+                imgNum = 0
+                photosList = globalSaveDict.get(samplesListBox.get()[0])
+                update_image()
 
     # Runs the Collection Picker Window
     # Enter file input path
@@ -314,8 +294,8 @@ def main():
                     # User sets the percent of collection they want
                     chance = values["-SLIDER-"]
 
-                    # Initialized to check if > 0 files have been copied
-                    photoIsCopied = False
+                    # Initialized to check if > 0 files have been sampled
+                    sampleEmpty = False
 
                     # List of files in source folder
                     sourceFileList = os.listdir(fileIn)
@@ -358,7 +338,6 @@ def main():
                         # Copy photos based on chance to create a sample
                         if 100*random.random() <= chance:
                             path=os.path.join(fileIn, collectionPhoto)
-                            sampledPhotos.append(collectionPhoto)
 
                             # Get blur score.  Low score == blurry
                             img = cv.imread(path)
@@ -380,6 +359,8 @@ def main():
                                 if (blurScore > 35 and brisqueScore < 70):
                                     # Add the photo name to a list in order to save a 
                                     sampledPhotos.append(collectionPhoto)
+                                    # Set sampleEmpty to false to indicate a sample now exists
+                                    sampleEmpty = False
 
                                     # TESTING (Use slow option)
                                     # if blurScore < 50:
@@ -406,12 +387,15 @@ def main():
                     #     print("         MIN: ", min(unacceptedBrisqueScores))
                     
                     # If no photos were sampled, notify user
-                    if not photoIsCopied:
+                    if sampleEmpty:
                         sg.popup("Sample is too small! Try a larger percentage.", keep_on_top=True, modal=True)
                     else:
                         collectionPickerWindow.close()
+
+                        globalSaveDict["Current Sample"] = sampledPhotos
+
                         # Open Image Viewer window
-                        view_sample_images(fileIn, fileOut, sampledPhotos)
+                        view_sample_images(fileIn)
 
     # Call func to open window for choosing a collection
     choose_collection_for_sample()
