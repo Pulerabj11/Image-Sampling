@@ -2,14 +2,14 @@ from glob import glob
 import os
 import stat
 import io
-import shutil
+import shutil # Shell Utilities
 from tkinter import FLAT
 import PySimpleGUI as sg
-from PIL import Image
+from PIL import Image # Pillow
 import random
-import sys
-import torch
-import piq
+import sys # System
+import torch # PyTorch
+import piq # Py Image Quality
 import cv2 as cv # Open Source Computer Vision (OpenCV)
 # from libtiff import TIFF
 
@@ -190,7 +190,10 @@ def main():
         def update_image():
             # Get a reference to image saved in memory
             bio = get_image()
-            imageViewerWindow["-IMAGE-"].update(data=bio.getvalue())
+            try:
+                imageViewerWindow["-IMAGE-"].update(data=bio.getvalue())
+            except Exception as e:
+                print("ERROR: " + e)
             imageViewerWindow["-IMAGECOUNT-"].update(str(imgNum+1) + " / " + str(len(photosList)))
             imageViewerWindow["-FILE-"].update(fileIn + "\\" + photosList[imgNum])
 
@@ -277,11 +280,13 @@ def main():
             if event == "Prev":
                 if imgNum != 0:
                     imgNum -= 1
+                    print("EVENT: Prev")
                     update_image()
 
             if event == "Next":
                 if imgNum != len(photosList)-1:
                     imgNum += 1
+                    print("EVENT: Next")
                     update_image()
 
             # Move back to collectionPickerWindow
@@ -305,6 +310,7 @@ def main():
             if event == "-SAMPLESLISTBOX-":
                 imgNum = 0
                 photosList = globalSaveDict.get(imageViewerWindow["-SAMPLESLISTBOX-"].get()[0])
+                print("EVENT: -SAMPLESLISTBOX-")
                 update_image()
 
     # Runs the Collection Picker Window
@@ -367,9 +373,9 @@ def main():
                     sampledPhotos = []
 
                     # TESTING
-                    # acceptedBrisqueScores = []
-                    # unacceptedBrisqueScores = []
-                    # blurArray = []
+                    acceptedBrisqueScores = []
+                    unacceptedBrisqueScores = []
+                    blurArray = []
 
                     # Copy a sample from source folder to output folder
                     for collectionPhoto in sourceFileList:
@@ -387,9 +393,6 @@ def main():
                             grey = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
                             blurScore = cv.Laplacian(grey, cv.CV_64F).var()
 
-                            # Testing (Use slow option)
-                            # print(collectionPhoto + ": (Blur = " + str(blurScore)  + ") + (Brisque = " + str(brisqueScore.item()) + ")")
-
                             # Slow run
                             if (isSlow):
                                 # Get image quality score (BRISQUE method)
@@ -398,8 +401,11 @@ def main():
                                 x = torch.tensor(cv.imread(path)).permute(2, 0, 1)[None, ...] / 255.
                                 brisqueScore = piq.brisque(x, data_range=1., reduction='none')
 
+                                # Testing (Use slow option)
+                                print(collectionPhoto + ": (Blur = " + str(blurScore)  + ") + (Brisque = " + str(brisqueScore.item()) + ")")
+
                                 # If blurScore and brisqueScore is acceptable, copy photo to sample
-                                if (blurScore > 35 and brisqueScore < 70):
+                                if (blurScore > 0 and brisqueScore < 70):
                                     # Add the photo name to a list in order to save a 
                                     sampledPhotos.append(collectionPhoto)
                                     # Set sampleEmpty to false to indicate a sample now exists
