@@ -8,6 +8,9 @@ import piq # Py Image Quality
 import cv2 as cv # Open Source Computer Vision (OpenCV)
 
 def main():
+    # Controls printed testing results
+    isTesting = False
+
     # Set the theme (Parkside Colors)
     sg.theme("Dark")
 
@@ -30,6 +33,7 @@ def main():
                 sg.Frame("", [[sg.FolderBrowse(initial_folder="M:\\Library\\Library Units\\Archives\\Archives team", key="-BROWSE-", target="-INPUTPATH-", size=(7, None), pad=(0,0))]], pad=(0,0), element_justification="r", relief=FLAT)
             ]
         ]
+
         percentSliderRow = [
             [
                 sg.Text("Choose Percentage: "),
@@ -103,6 +107,7 @@ def main():
                 sg.Frame("", listCol, size=(248,698))
             ]
         ]
+
         return sg.Window("Sample Image Viewer", imageViewerLayout, size=(1280,fixed_height+100), use_default_focus=False)
 
     # Create rename_sample window
@@ -113,6 +118,7 @@ def main():
                 [sg.InputText(size=(25, 15), key="-SAMPLENAMEINPUT-", focus=True), sg.Button("Submit", size=(7, None), bind_return_key=True)]
             ]
         ]
+
         return sg.Window("", giveSampleNameLayout, element_justification="c", keep_on_top=True, modal=True)
 
     # Create rename_sample window
@@ -123,6 +129,7 @@ def main():
                 [sg.InputText(size=(25, 15), key="-SAMPLENAMEINPUT-", focus=True), sg.Button("Submit", size=(7, None), bind_return_key=True)]
             ]
         ]
+
         return sg.Window("", giveSampleNameLayout, element_justification="c", keep_on_top=True, modal=True, use_default_focus=False)
 
     # Create ask_to_save window
@@ -133,6 +140,7 @@ def main():
                 [sg.Push(), sg.Button("Yes", size=(7, None)), sg.Push(), sg.Button("No", size=(7, None)), sg.Push()]
             ]
         ]
+
         return sg.Window("", askToSaveLayout, element_justification="c", keep_on_top=True, modal=True, use_default_focus=False)
 
     # Loop through the photos given by the sampleName key in globalSaveDict
@@ -154,6 +162,88 @@ def main():
 
             # Copy photo from collection to sample folder
             shutil.copy(path, fileOut)
+
+    # Prints values associated with accepted/unaccepted blur and brisque scores
+    def testing(isSlow, accepted, unaccepted):
+        # Slow accepted/unaccepted are dicts where key/value = string/[float, float]
+        # Fast accepted/unaccepted are dicts where key/value = string/[float]
+
+        acceptedBlurScores = []
+        unacceptedBlurScores = []
+        acceptedBrisqueScores = []
+        unacceptedBrisqueScores = []
+
+        # Slow run looks at blur and brisque scores
+        if isSlow:
+            print("\n----Slow Mode----")
+            print("Accepted Photos")
+
+            # Print individual accepted photo results
+            for photo in accepted:
+                print("         " + str(photo) + ": (Blur = " + str(accepted[photo][0])  + ") + (Brisque = " + str(accepted[photo][1]) + ")")
+                acceptedBlurScores.append(accepted[photo][0])
+                acceptedBrisqueScores.append(accepted[photo][1])
+
+            # Print individual unaccepted photo results
+            print("\nUnaccepted Photos")
+            for photo in unaccepted:
+                print("         " + str(photo) + ": (Blur = " + str(unaccepted[photo][0])  + ") + (Brisque = " + str(unaccepted[photo][1]) + ")")
+                unacceptedBlurScores.append(unaccepted[photo][0])
+                unacceptedBrisqueScores.append(unaccepted[photo][1])
+
+            # Print blur score statistics
+            print("\n-Blur Scores-")
+            if (len(acceptedBlurScores) > 0):
+                print("Accepted: ", acceptedBlurScores)
+                print("         AVG: ", round(sum(acceptedBlurScores)/len(acceptedBlurScores), 2))
+                print("         MAX: ", max(acceptedBlurScores))
+                print("         MIN: ", min(acceptedBlurScores))
+            if (len(unacceptedBlurScores) > 0):
+                print("Unaccepted: ", unacceptedBlurScores)
+                print("         AVG: ", round(sum(unacceptedBlurScores)/len(unacceptedBlurScores), 2))
+                print("         MAX: ", max(unacceptedBlurScores))
+                print("         MIN: ", min(unacceptedBlurScores))
+
+            # Print brisque score statistics
+            print("\n-Brisque Scores-")
+            if (len(acceptedBrisqueScores) > 0):
+                print("Accepted: ", acceptedBrisqueScores)
+                print("         AVG: ", round(sum(acceptedBrisqueScores)/len(acceptedBrisqueScores), 2))
+                print("         MAX: ", max(acceptedBrisqueScores))
+                print("         MIN: ", min(acceptedBrisqueScores))
+            if (len(unacceptedBrisqueScores) > 0):
+                print("Unaccepted: ", unacceptedBrisqueScores)
+                print("         AVG: ", round(sum(unacceptedBrisqueScores)/len(unacceptedBrisqueScores), 2))
+                print("         MAX: ", max(unacceptedBrisqueScores))
+                print("         MIN: ", min(unacceptedBrisqueScores))
+        
+        else: # Fast run only looks at blur scores
+            print("\n----Fast Mode----")
+
+            # Print individual accepted photo results
+            print("Accepted Photos")
+            for photo in accepted:
+                print("         " + str(photo) + ": (Blur = " + str(accepted[photo][0])  + ")")
+                acceptedBlurScores.append(accepted[photo][0])
+
+            # Print individual unaccepted photo results
+            print("\nUnaccepted Photos")
+            for photo in unaccepted:
+                print("         " + str(photo) + ": (Blur = " + str(unaccepted[photo][0])  + ")")
+                unacceptedBlurScores.append(unaccepted[photo][0])
+
+            # Print blur score statistics
+            print("\n-Blur Scores-")
+            if (len(acceptedBlurScores) > 0):
+                print("Accepted: ", acceptedBlurScores)
+                print("         AVG: ", round(sum(acceptedBlurScores)/len(acceptedBlurScores), 2))
+                print("         MAX: ", max(acceptedBlurScores))
+                print("         MIN: ", min(acceptedBlurScores))
+            if (len(unacceptedBlurScores) > 0):
+                print("Unaccepted: ", unacceptedBlurScores)
+                print("         AVG: ", round(sum(unacceptedBlurScores)/len(unacceptedBlurScores), 2))
+                print("         MAX: ", max(unacceptedBlurScores))
+                print("         MIN: ", min(unacceptedBlurScores))
 
     # Runs the image viewer
     # Browse the sampled images
@@ -416,9 +506,8 @@ def main():
                     sampledPhotos = []
 
                     # TESTING
-                    # acceptedBrisqueScores = []
-                    # unacceptedBrisqueScores = []
-                    # blurArray = []
+                    accepted = {}
+                    unaccepted = {}
 
                     # Copy a sample from source folder to output folder
                     for collectionPhoto in sourceFileList:
@@ -444,37 +533,29 @@ def main():
                                 x = torch.tensor(cv.imread(path)).permute(2, 0, 1)[None, ...] / 255.
                                 brisqueScore = piq.brisque(x, data_range=1., reduction='none')
 
-                                # Testing (Use slow option)
-                                # print(collectionPhoto + ": (Blur = " + str(blurScore)  + ") + (Brisque = " + str(brisqueScore.item()) + ")")
-
-                                # If blurScore and brisqueScore is acceptable, copy photo to sample
-                                if (blurScore > 35 and brisqueScore < 70): # Slow run
-                                    # Add the photo name to a list in order to save a 
+                                # If blurScore and brisqueScore are acceptable, copy photo to sample
+                                if (blurScore > 35 and brisqueScore.item() < 70): # Slow run
+                                    # Add the photo file name to list
                                     sampledPhotos.append(collectionPhoto)
 
-                                    # TESTING (Use slow option)
-                                    # if blurScore < 50:
-                                    #     acceptedBrisqueScores.append(brisqueScore.item())
-                                    #     blurArray.append(blurScore)
-                                    # else: unacceptedBrisqueScores.append(brisqueScore.item())
-
+                                    # TESTING
+                                    accepted[collectionPhoto] = [round(blurScore, 2), round(brisqueScore.item(), 2)]
+                                else:
+                                    # TESTING
+                                    unaccepted[collectionPhoto] = [round(blurScore, 2), round(brisqueScore.item(), 2)]
                             elif (blurScore > 35): # Fast run
-                                # if blurScore is acceptable, copy photo to sample
-                                
-                                # Add the photo name to a list in order to save a 
+                                # Add the photo file name to list
                                 sampledPhotos.append(collectionPhoto)
 
-                    # Testing (Use slow option)
-                    # print("Brisque Scores")
-                    # print("Accepted: ", acceptedBrisqueScores)
-                    # print("         AVG: ", sum(acceptedBrisqueScores)/len(acceptedBrisqueScores))
-                    # print("         MAX: ", max(acceptedBrisqueScores))
-                    # print("         MIN: ", min(acceptedBrisqueScores))
-                    # if (len(unacceptedBrisqueScores) > 0):
-                    #     print("Unaccepted:", unacceptedBrisqueScores)
-                    #     print("         AVG: ", sum(unacceptedBrisqueScores)/len(unacceptedBrisqueScores))
-                    #     print("         MAX: ", max(unacceptedBrisqueScores))
-                    #     print("         MIN: ", min(unacceptedBrisqueScores))
+                                # TESTING
+                                accepted[collectionPhoto] = [round(blurScore, 2)]
+                            else:
+                                # TESTING
+                                unaccepted[collectionPhoto] = [round(blurScore, 2)]
+
+                    # global isTesting controls whether test results are printed
+                    if isTesting:
+                        testing(isSlow, accepted, unaccepted)
                     
                     # If no photos were sampled, notify user
                     # Else, save the current sample to the dictionary
