@@ -1,10 +1,9 @@
 import os, stat, io, random, sys
 import shutil # Shell Utilities
-from tkinter import FLAT
 import PySimpleGUI as sg
 from PIL import Image, ImageOps # Pillow
 import torch # PyTorch
-import piq # Py Image Quality
+import piq # PyTorch Image Quality
 import cv2 as cv # Open Source Computer Vision (OpenCV)
 
 def main():
@@ -30,7 +29,7 @@ def main():
                 sg.Text("Source Folder Path: "),
                 sg.Input(size=(59,15), key="-INPUTPATH-", tooltip="Select a folder with a collection of photos", focus=True, disabled_readonly_background_color=("#4d4d4d")),
                 sg.Push(),
-                sg.Frame("", [[sg.FolderBrowse(initial_folder="M:\\Library\\Library Units\\Archives\\Archives team", key="-BROWSE-", target="-INPUTPATH-", size=(7, None), pad=(0,0))]], pad=(0,0), element_justification="r", relief=FLAT)
+                sg.Frame("", [[sg.FolderBrowse(initial_folder="M:\\Library\\Library Units\\Archives\\Archives team", key="-BROWSE-", target="-INPUTPATH-", size=(7, None), pad=(0,0))]], pad=(0,0), element_justification="r", relief=sg.RELIEF_FLAT)
             ]
         ]
 
@@ -45,7 +44,7 @@ def main():
             [
                 sg.Push(),
                 sg.Radio("Slow", group_id="-SPEEDRADIO-", key="-SLOWRADIO-", tooltip="Advanced photo quality assessment", default=True),
-                sg.Frame("", [[sg.Text("", key="-FILEINCOUNTER-", pad=((5,5),(2,0)), justification="c")]], size=(100, 40), pad=(5,0), element_justification="c", relief=FLAT),
+                sg.Frame("", [[sg.Text("", key="-FILEINCOUNTER-", pad=((5,5),(2,0)), justification="c")]], size=(100, 40), pad=(5,0), element_justification="c", relief=sg.RELIEF_FLAT),
                 sg.Radio("Fast", group_id="-SPEEDRADIO-", key="-FASTRADIO-", tooltip="Simple photo quality assessment"),
                 sg.Push()
             ]
@@ -53,11 +52,11 @@ def main():
 
         optionsAndButtonsRow = [
             [
-                sg.Frame("", [[sg.Button("Ok", size=(7, None), pad=(0,0), bind_return_key=True)]], pad=(0,0), element_justification="l", relief=FLAT),
+                sg.Frame("", [[sg.Button("Ok", size=(7, None), pad=(0,0), bind_return_key=True)]], pad=(0,0), element_justification="l", relief=sg.RELIEF_FLAT),
                 sg.Push(),
-                sg.Frame("", radioOptions, relief=FLAT),
+                sg.Frame("", radioOptions, relief=sg.RELIEF_FLAT),
                 sg.Push(),
-                sg.Frame("", [[sg.Button("Exit", size=(7, None), pad=(0,0))]], pad=(0,0), element_justification="r", relief=FLAT)
+                sg.Frame("", [[sg.Button("Exit", size=(7, None), pad=(0,0))]], pad=(0,0), element_justification="r", relief=sg.RELIEF_FLAT)
             ]
         ]
 
@@ -65,16 +64,16 @@ def main():
             [
                 sg.Frame("Choose a collection",
                     [
-                        [sg.Frame("", sourceFolderRow, size=(650, 40), relief=FLAT)],
-                        [sg.Frame("", percentSliderRow, relief=FLAT)],
-                        [sg.Frame("", optionsAndButtonsRow, size=(650, 40), relief=FLAT)]
+                        [sg.Frame("", sourceFolderRow, size=(650, 40), relief=sg.RELIEF_FLAT)],
+                        [sg.Frame("", percentSliderRow, relief=sg.RELIEF_FLAT)],
+                        [sg.Frame("", optionsAndButtonsRow, size=(650, 40), relief=sg.RELIEF_FLAT)]
                     ]
                     ,size=(650, 165)
                 )
             ]
         ]
 
-        return sg.Window("Image Sampler", collectionPickerLayout, use_default_focus=False, finalize=True)
+        return sg.Window("Collection Picker", collectionPickerLayout, use_default_focus=False, finalize=True)
 
     # Create view_sample_images window
     def make_window_image_viewer(bio, imgNum, sampledPhotos, fixed_height, fileIn):
@@ -93,7 +92,7 @@ def main():
         imageCol = [
             [sg.Image(data=bio.getvalue(), key="-IMAGE-")],
             [sg.Text(fileIn + "\\" + sampledPhotos[imgNum], key="-FILE-", justification="c")],
-            [sg.Frame("", buttonsRow, size=(700, 36), relief=FLAT)]
+            [sg.Frame("", buttonsRow, size=(700, 36), relief=sg.RELIEF_FLAT)]
         ]
 
         listCol = [
@@ -108,7 +107,7 @@ def main():
             ]
         ]
 
-        return sg.Window("Sample Image Viewer", imageViewerLayout, size=(1280,fixed_height+100), use_default_focus=False)
+        return sg.Window("Image Viewer", imageViewerLayout, size=(1280,fixed_height+100), use_default_focus=False)
 
     # Create rename_sample window
     def make_window_rename_current_sample():
@@ -530,7 +529,7 @@ def main():
                                 # Get image quality score (BRISQUE method)
                                 # BRISQUE values typically range between 0 (Very good quality) and 150 (very bad quality).
                                 # Some clean images may show high BRISQUE values based on the nature of the image.
-                                x = torch.tensor(cv.imread(path)).permute(2, 0, 1)[None, ...] / 255.
+                                x = torch.tensor(img).permute(2, 0, 1)[None, ...] / 255.
                                 brisqueScore = piq.brisque(x, data_range=1., reduction='none')
 
                                 # If blurScore and brisqueScore are acceptable, copy photo to sample
