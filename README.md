@@ -24,9 +24,11 @@ Once the sample is created, an image viewer opens which allows the user to brows
 
 ## Image Quality Assessment
 **Blur Score**  This is implemented with the Open Computer Vision library.  This is the only image quality assessment that runs in fast mode.  To get the blur score, a laplacian operation is performed on each pixel in the image.  Then, the variance of the resulting values is obtained.  This value determines how similar each pixel is overall.  In a blurry image, colors and edges blend together resulting in a low variance.
+
 **Low variance == More blurry**
 
 **BRISQUE:**  Blind/Referenceless Image Spatial QUality Evaluator is a model for computing an image quality score.  This assessment is done based on predetermined values which indicate good image quality.  It is used alongside the blur score when running in slow mode.
+
 **Low BRISQUE score == Higher quality**
 
 ## Libraries
