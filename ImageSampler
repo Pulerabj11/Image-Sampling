@@ -8,7 +8,7 @@ import cv2 as cv # Open Source Computer Vision (OpenCV)
 
 def main():
     # Controls printed testing results
-    isTesting = False
+    isTesting = True
 
     # Set the theme (Parkside Colors)
     sg.theme("Dark")
@@ -255,11 +255,11 @@ def main():
             imgFilename = photosList[imgNum]
             imgFilepath = fileIn + "\\" + imgFilename
             try:
-                # Resize the image
                 image = Image.open(imgFilepath)
                 image = ImageOps.exif_transpose(image) # Re-orient image based on exif data
-                image = image.resize([calculate_width(image), fixed_height])
-                
+                image = image.resize([calculate_width(image), fixed_height]) # Resize the image
+                image = image.convert('RGB') # Change color mode to something acceptable for saving as PNG
+
                 # Save image to memory
                 bio = io.BytesIO()
                 image.save(bio, format="PNG")
@@ -505,6 +505,7 @@ def main():
                     sampledPhotos = []
 
                     # TESTING
+                    # Initialize dictionaries to store info on image quality assessment scores
                     accepted = {}
                     unaccepted = {}
 
@@ -533,23 +534,27 @@ def main():
                                 brisqueScore = piq.brisque(x, data_range=1., reduction='none')
 
                                 # If blurScore and brisqueScore are acceptable, copy photo to sample
-                                if (blurScore > 35 and brisqueScore.item() < 70): # Slow run
+                                if (blurScore > 15 and (blurScore > 35 or brisqueScore.item() < 60)): # Slow run
                                     # Add the photo file name to list
                                     sampledPhotos.append(collectionPhoto)
 
                                     # TESTING
+                                    # Build dictionary of accepted image quality assessment scores
                                     accepted[collectionPhoto] = [round(blurScore, 2), round(brisqueScore.item(), 2)]
                                 else:
                                     # TESTING
+                                    # Build dictionary of unaccepted image quality assessment scores
                                     unaccepted[collectionPhoto] = [round(blurScore, 2), round(brisqueScore.item(), 2)]
                             elif (blurScore > 35): # Fast run
                                 # Add the photo file name to list
                                 sampledPhotos.append(collectionPhoto)
 
                                 # TESTING
+                                # Build dictionary of accepted image quality assessment scores
                                 accepted[collectionPhoto] = [round(blurScore, 2)]
                             else:
                                 # TESTING
+                                # Build dictionary of unaccepted image quality assessment scores
                                 unaccepted[collectionPhoto] = [round(blurScore, 2)]
 
                     # global isTesting controls whether test results are printed

@@ -11,7 +11,7 @@
 	- Open Computer Vision
 
 ## Introduction
-This program is written in Python and uses a variety of libraries to open, read, view, and manipulate images.  It was created to take a sample of a collection of images and filter out poor quality images using two methods of image quality assessment.
+This program is written in Python and uses a variety of libraries to open, read, view, and manipulate images.  Its purpose is to take a sample of a collection of images and filter out poor quality images using two methods of image quality assessment.
 
 It prompts the user to enter a file path to a folder containing images.  The user chooses a percent for the sample size.  They also choose a fast or slow mode which determines the level of image quality filtering.
 
