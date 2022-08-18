@@ -43,9 +43,9 @@ def main():
         radioOptions = [
             [
                 sg.Push(),
-                sg.Radio("Slow", group_id="-SPEEDRADIO-", key="-SLOWRADIO-", tooltip="Advanced photo quality assessment", default=True),
+                sg.Radio("Blur", group_id="-SPEEDRADIO-", key="-BLURRADIO-", tooltip="Advanced photo quality assessment", default=True),
                 sg.Frame("", [[sg.Text("", key="-FILEINCOUNTER-", pad=((5,5),(2,0)), justification="c")]], size=(100, 40), pad=(5,0), element_justification="c", relief=sg.RELIEF_FLAT),
-                sg.Radio("Fast", group_id="-SPEEDRADIO-", key="-FASTRADIO-", tooltip="Simple photo quality assessment"),
+                sg.Radio("BRISQUE", group_id="-SPEEDRADIO-", key="-BRISQUERADIO-", tooltip="Simple photo quality assessment"),
                 sg.Push()
             ]
         ]
@@ -175,9 +175,9 @@ def main():
         # Slow run looks at blur and brisque scores
         if isSlow:
             print("\n----Slow Mode----")
-            print("Accepted Photos")
 
             # Print individual accepted photo results
+            print("Accepted Photos")
             for photo in accepted:
                 print("         " + str(photo) + ": (Blur = " + str(accepted[photo][0])  + ") + (Brisque = " + str(accepted[photo][1]) + ")")
                 acceptedBlurScores.append(accepted[photo][0])
@@ -484,8 +484,11 @@ def main():
                     # Initialize file counter for source read
                     fileInCount = 0
 
-                    # Slow setting picked.  Brisque scoring is ignored.
-                    isSlow = values["-SLOWRADIO-"]
+                    # Blur filter selected.
+                    isBlur = values["-BLURRADIO-"]
+
+                    # BRISQUE filter selected.
+                    isBrisque = values["-BRISQUERADIO-"]
 
                     # Clean up the sourceFileList
                     for collectionPhoto in sourceFileList[:]:
@@ -520,19 +523,20 @@ def main():
                         if 100*random.random() <= chance:
                             path=os.path.join(fileIn, collectionPhoto)
 
-                            # Get blur score.  Low score == blurry
-                            img = cv.imread(path)
-                            grey = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-                            blurScore = cv.Laplacian(grey, cv.CV_64F).var()
+                            if isBlur:
+                                # Get blur score.  Low score == blurry
+                                img = cv.imread(path)
+                                grey = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+                                blurScore = cv.Laplacian(grey, cv.CV_64F).var()
 
-                            # Slow run
-                            if (isSlow):
+                            if isBrisque:
                                 # Get image quality score (BRISQUE method)
                                 # BRISQUE values typically range between 0 (Very good quality) and 150 (very bad quality).
                                 # Some clean images may show high BRISQUE values based on the nature of the image.
                                 x = torch.tensor(img).permute(2, 0, 1)[None, ...] / 255.
                                 brisqueScore = piq.brisque(x, data_range=1., reduction='none')
 
+                            if (isBlur and isBrisque):
                                 # If blurScore and brisqueScore are acceptable, copy photo to sample
                                 if (blurScore > 15 and (blurScore > 35 or brisqueScore.item() < 60)): # Slow run
                                     # Add the photo file name to list
@@ -545,21 +549,34 @@ def main():
                                     # TESTING
                                     # Build dictionary of unaccepted image quality assessment scores
                                     unaccepted[collectionPhoto] = [round(blurScore, 2), round(brisqueScore.item(), 2)]
-                            elif (blurScore > 35): # Fast run
-                                # Add the photo file name to list
-                                sampledPhotos.append(collectionPhoto)
+                            elif isBlur:
+                                if (blurScore > 35): # Fast run
+                                    # Add the photo file name to list
+                                    sampledPhotos.append(collectionPhoto)
 
-                                # TESTING
-                                # Build dictionary of accepted image quality assessment scores
-                                accepted[collectionPhoto] = [round(blurScore, 2)]
-                            else:
-                                # TESTING
-                                # Build dictionary of unaccepted image quality assessment scores
-                                unaccepted[collectionPhoto] = [round(blurScore, 2)]
+                                    # TESTING
+                                    # Build dictionary of accepted image quality assessment scores
+                                    accepted[collectionPhoto] = [round(blurScore, 2)]
+                                else:
+                                    # TESTING
+                                    # Build dictionary of unaccepted image quality assessment scores
+                                    unaccepted[collectionPhoto] = [round(blurScore, 2)]
+                            elif isBrisque:
+                                if (brisqueScore < 60): # Fast run
+                                    # Add the photo file name to list
+                                    sampledPhotos.append(collectionPhoto)
+
+                                    # TESTING
+                                    # Build dictionary of accepted image quality assessment scores
+                                    accepted[collectionPhoto] = [round(brisqueScore.item(), 2)]
+                                else:
+                                    # TESTING
+                                    # Build dictionary of unaccepted image quality assessment scores
+                                    unaccepted[collectionPhoto] = [round(brisqueScore.item(), 2)]
 
                     # global isTesting controls whether test results are printed
                     if isTesting:
-                        testing(isSlow, accepted, unaccepted)
+                        testing(isBlur, isBrisque, accepted, unaccepted)
                     
                     # If no photos were sampled, notify user
                     # Else, save the current sample to the dictionary
