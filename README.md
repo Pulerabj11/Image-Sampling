@@ -17,6 +17,8 @@ It prompts the user to enter a file path to a folder containing images.  The use
 
 Once the sample is created, an image viewer opens which allows the user to browse samples, create more samples, or save a sample.
 
+The acceptable image file type are **jpg, png, bmp, tiff, and tif**
+
 ## Windows
 **Collection Picker:**  This window allows the user to browse for a folder or enter a file path.  A sample is created using the given percentage and run-mode (fast or slow).  Slow mode uses blur and BRISQUE scores to filter out poor quality images.
 
