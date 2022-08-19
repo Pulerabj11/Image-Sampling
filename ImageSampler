@@ -40,12 +40,12 @@ def main():
             ]
         ]
 
-        radioOptions = [
+        checkboxOptions = [
             [
                 sg.Push(),
-                sg.Radio("Blur", group_id="-SPEEDRADIO-", key="-BLURRADIO-", tooltip="Advanced photo quality assessment", default=True),
+                sg.Checkbox("Blur", key="-BLURCHECKBOX-", tooltip="Fast"),
                 sg.Frame("", [[sg.Text("", key="-FILEINCOUNTER-", pad=((5,5),(2,0)), justification="c")]], size=(100, 40), pad=(5,0), element_justification="c", relief=sg.RELIEF_FLAT),
-                sg.Radio("BRISQUE", group_id="-SPEEDRADIO-", key="-BRISQUERADIO-", tooltip="Simple photo quality assessment"),
+                sg.Checkbox("BRISQUE", key="-BRISQUECHECKBOX-", tooltip="Slow"),
                 sg.Push()
             ]
         ]
@@ -54,7 +54,7 @@ def main():
             [
                 sg.Frame("", [[sg.Button("Ok", size=(7, None), pad=(0,0), bind_return_key=True)]], pad=(0,0), element_justification="l", relief=sg.RELIEF_FLAT),
                 sg.Push(),
-                sg.Frame("", radioOptions, relief=sg.RELIEF_FLAT),
+                sg.Frame("", checkboxOptions, relief=sg.RELIEF_FLAT),
                 sg.Push(),
                 sg.Frame("", [[sg.Button("Exit", size=(7, None), pad=(0,0))]], pad=(0,0), element_justification="r", relief=sg.RELIEF_FLAT)
             ]
@@ -79,11 +79,18 @@ def main():
     def make_window_image_viewer(bio, imgNum, sampledPhotos, fixed_height, fileIn):
         buttonsRow = [
             [
-                sg.Button("Create Another Sample", size=(18, None)),
-                sg.Push(),
+                sg.Button("Add", key="-ADDTOSAMPLE-"),
                 sg.Button("Prev", size=(7, None), pad=(0,3)),
                 sg.Text(str(imgNum+1) + " / " + str(len(sampledPhotos)), key="-IMAGECOUNT-", size=(12, None), justification="c"),
                 sg.Button("Next", size=(7, None), pad=(0,3)),
+                sg.Button("Remove", key="-REMOVEFROMSAMPLE-")
+            ],
+            [
+                sg.Button("Create Another Sample", size=(18, None)),
+                sg.Push(),
+                sg.Radio("Accepted", group_id="-ACCEPTEDRADIOGROUP-", key="-ACCEPTEDRADIO-", enable_events=True, default=True),
+                sg.Push(),
+                sg.Radio("Rejected", group_id="-ACCEPTEDRADIOGROUP-", key="-REJECTEDRADIO-", enable_events=True),
                 sg.Push(),
                 sg.Button("Exit", size=(18, None))
             ]
@@ -92,7 +99,7 @@ def main():
         imageCol = [
             [sg.Image(data=bio.getvalue(), key="-IMAGE-")],
             [sg.Text(fileIn + "\\" + sampledPhotos[imgNum], key="-FILE-", justification="c")],
-            [sg.Frame("", buttonsRow, size=(700, 36), relief=sg.RELIEF_FLAT)]
+            [sg.Frame("", buttonsRow, size=(850, 72), relief=sg.RELIEF_FLAT, element_justification="c")]
         ]
 
         listCol = [
@@ -102,12 +109,12 @@ def main():
         
         imageViewerLayout = [
             [
-                sg.Frame("", imageCol, size=(1028,698), element_justification="c"),
-                sg.Frame("", listCol, size=(248,698))
+                sg.Frame("", imageCol, size=(1028,730), element_justification="c"),
+                sg.Frame("", listCol, size=(248,730))
             ]
         ]
 
-        return sg.Window("Image Viewer", imageViewerLayout, size=(1280,fixed_height+100), use_default_focus=False)
+        return sg.Window("Image Viewer", imageViewerLayout, size=(1280,fixed_height+132), use_default_focus=False, finalize=True)
 
     # Create rename_sample window
     def make_window_rename_current_sample():
@@ -151,7 +158,7 @@ def main():
         os.makedirs(fileOut)
 
         # For each photo, fix 'Read-only' property and copy to the sample directory
-        for photo in globalSaveDict[sampleName]:
+        for photo in globalSaveDict[sampleName][0]:
             # Path to each photo in globalSaveDict
             path = fileIn + "\\" + photo
 
@@ -162,8 +169,11 @@ def main():
             # Copy photo from collection to sample folder
             shutil.copy(path, fileOut)
 
+        # Open the output folder
+        os.startfile(fileOut)
+
     # Prints values associated with accepted/unaccepted blur and brisque scores
-    def testing(isSlow, accepted, unaccepted):
+    def testing(isBlur, isBrisque, accepted, unaccepted):
         # Slow accepted/unaccepted are dicts where key/value = string/[float, float]
         # Fast accepted/unaccepted are dicts where key/value = string/[float]
 
@@ -173,8 +183,8 @@ def main():
         unacceptedBrisqueScores = []
 
         # Slow run looks at blur and brisque scores
-        if isSlow:
-            print("\n----Slow Mode----")
+        if (isBlur and isBrisque):
+            print("\n----Image Quality Assessment Scores----")
 
             # Print individual accepted photo results
             print("Accepted Photos")
@@ -216,8 +226,8 @@ def main():
                 print("         MAX: ", max(unacceptedBrisqueScores))
                 print("         MIN: ", min(unacceptedBrisqueScores))
         
-        else: # Fast run only looks at blur scores
-            print("\n----Fast Mode----")
+        elif isBlur: # Fast run only looks at blur scores
+            print("\n----Image Quality Assessment Scores----")
 
             # Print individual accepted photo results
             print("Accepted Photos")
@@ -243,6 +253,33 @@ def main():
                 print("         AVG: ", round(sum(unacceptedBlurScores)/len(unacceptedBlurScores), 2))
                 print("         MAX: ", max(unacceptedBlurScores))
                 print("         MIN: ", min(unacceptedBlurScores))
+        elif isBrisque: # Fast run only looks at blur scores
+            print("\n----Image Quality Assessment Scores----")
+
+            # Print individual accepted photo results
+            print("Accepted Photos")
+            for photo in accepted:
+                print("         " + str(photo) + ": (Brisque = " + str(accepted[photo][0])  + ")")
+                acceptedBrisqueScores.append(accepted[photo][0])
+
+            # Print individual unaccepted photo results
+            print("\nUnaccepted Photos")
+            for photo in unaccepted:
+                print("         " + str(photo) + ": (Brisque = " + str(unaccepted[photo][0])  + ")")
+                unacceptedBrisqueScores.append(unaccepted[photo][0])
+
+            # Print brisque score statistics
+            print("\n-Brisque Scores-")
+            if (len(acceptedBrisqueScores) > 0):
+                print("Accepted: ", acceptedBrisqueScores)
+                print("         AVG: ", round(sum(acceptedBrisqueScores)/len(acceptedBrisqueScores), 2))
+                print("         MAX: ", max(acceptedBrisqueScores))
+                print("         MIN: ", min(acceptedBrisqueScores))
+            if (len(unacceptedBrisqueScores) > 0):
+                print("Unaccepted: ", unacceptedBrisqueScores)
+                print("         AVG: ", round(sum(unacceptedBrisqueScores)/len(unacceptedBrisqueScores), 2))
+                print("         MAX: ", max(unacceptedBrisqueScores))
+                print("         MIN: ", min(unacceptedBrisqueScores))
 
     # Runs the image viewer
     # Browse the sampled images
@@ -258,7 +295,7 @@ def main():
                 image = Image.open(imgFilepath)
                 image = ImageOps.exif_transpose(image) # Re-orient image based on exif data
                 image = image.resize([calculate_width(image), fixed_height]) # Resize the image
-                image = image.convert('RGB') # Change color mode to something acceptable for saving as PNG
+                image = image.convert('RGBA') # Change color mode to something acceptable for saving as PNG
 
                 # Save image to memory
                 bio = io.BytesIO()
@@ -344,8 +381,11 @@ def main():
         # Image fixed height
         fixed_height = 600
         
-        # Get initial list of photos to populate the viewer
-        photosList = globalSaveDict[list(globalSaveDict)[-1]]
+        # Get initial list of accepted sampled photos to populate the viewer
+        photosList = globalSaveDict[list(globalSaveDict)[-1]][0]
+
+        # Set this to avoid double clicks on radio buttons
+        radioControl = "Accepted"
 
         # Get a reference to image saved in memory
         bio = get_image()
@@ -357,8 +397,19 @@ def main():
         # Create Image Viewer window
         imageViewerWindow = make_window_image_viewer(bio, imgNum, photosList, fixed_height, fileIn)
 
+        # Check if there are any rejected photos for this sample.  If not, disable the reject radio
+        if len(globalSaveDict[list(globalSaveDict)[-1]][1]) == 0:
+            imageViewerWindow["-REJECTEDRADIO-"].update(disabled=True)
+
         # imageViewerWindow event loop
         while True:
+            if radioControl == "Accepted":
+                imageViewerWindow["-ADDTOSAMPLE-"].update(disabled=True)
+                imageViewerWindow["-REMOVEFROMSAMPLE-"].update(disabled=False)
+            else:
+                imageViewerWindow["-REMOVEFROMSAMPLE-"].update(disabled=True)
+                imageViewerWindow["-ADDTOSAMPLE-"].update(disabled=False)
+
             # Get events and values from the window
             event, values = imageViewerWindow.read()
 
@@ -373,6 +424,55 @@ def main():
                     
             if event == "Exit":
                 ask_to_save()
+
+            # Get the currently selected item in the samples list box
+            selectedSampleName = imageViewerWindow["-SAMPLESLISTBOX-"].get()[0]
+
+            # If not already selected, update the image viewer to show accepted sampled photos
+            if radioControl != "Accepted":
+                if event == "-ACCEPTEDRADIO-":
+                    # Get initial list of accepted photos to populate the viewer
+                    photosList = globalSaveDict[selectedSampleName][0]
+                    imgNum = 0
+                    update_image()
+                    radioControl = "Accepted"
+
+            # If not already selected, update the image viewer to show rejected sampled photos
+            if radioControl != "Rejected":
+                if event == "-REJECTEDRADIO-":
+                    # Get initial list of rejected photos to populate the viewer
+                    photosList = globalSaveDict[selectedSampleName][1]
+                    imgNum = 0
+                    update_image()
+                    radioControl = "Rejected"
+
+            if event == "-REMOVEFROMSAMPLE-":
+                if len(photosList) is not 1:
+                    globalSaveDict[selectedSampleName][1].append(globalSaveDict[selectedSampleName][0].pop(imgNum))
+                    # Get initial list of rejected photos to populate the viewer
+                    photosList = globalSaveDict[selectedSampleName][0]
+                    if len(photosList) == 0:
+                        radioControl = "Rejected"
+                        imageViewerWindow["-REJECTEDRADIO-"].update(value=True)
+                        photosList = globalSaveDict[selectedSampleName][1]
+                    if imgNum > (len(photosList)-1):
+                        imgNum -= 1
+                    update_image()
+                else:
+                    sg.popup_no_buttons("Can't remove last photo.", title="", auto_close=True, auto_close_duration=1.5, keep_on_top=True, modal=True)
+
+            if event == "-ADDTOSAMPLE-":
+                globalSaveDict[selectedSampleName][0].append(globalSaveDict[selectedSampleName][1].pop(imgNum))
+                # Get initial list of rejected photos to populate the viewer
+                photosList = globalSaveDict[selectedSampleName][1]
+                if len(photosList) == 0:
+                    radioControl = "Accepted"
+                    imageViewerWindow["-ACCEPTEDRADIO-"].update(value=True)
+                    imageViewerWindow["-REJECTEDRADIO-"].update(disabled=True)
+                    photosList = globalSaveDict[selectedSampleName][0]
+                elif imgNum > (len(photosList)-1):
+                    imgNum -= 1
+                update_image()
 
             # Move through next/prev images in sample
             if event == "Prev":
@@ -391,6 +491,7 @@ def main():
                 if "Current Sample" in globalSaveDict:
                     window = make_window_rename_current_sample()
                     sampleName = rename_sample(fileIn, window)
+
                     # If rename_sample returns None, then the sample name was not renamed
                     if sampleName != None:
                         imageViewerWindow.close()
@@ -401,32 +502,41 @@ def main():
 
             # Save the current selected sample
             if event == "Save":
-                # Get the currently selected item in the samples list box
-                sampleName = imageViewerWindow["-SAMPLESLISTBOX-"].get()[0]
 
-                # If the sample name is 'Current Sample', rename it.
-                if sampleName == "Current Sample":
+                # If the sample name is 'Current Sample', rename it then save.  Else save sample
+                if selectedSampleName == "Current Sample":
                     window = make_window_rename_sample()
 
                     # Get user input for new sample name
-                    sampleName = rename_sample(fileIn, window)
+                    selectedSampleName = rename_sample(fileIn, window)
 
                     # If rename_sample returns None, then the sample name was not renamed
-                    if sampleName != None:
+                    if selectedSampleName != None:
                         sg.popup_no_buttons("Saving...", title="", non_blocking=True, keep_on_top=True, modal=True)
-                        saveSample(fileIn, sampleName)
+                        saveSample(fileIn, selectedSampleName)
                         imageViewerWindow.close()
                         sys.exit()
                 else:
                     sg.popup_no_buttons("Saving...", title="", non_blocking=True, keep_on_top=True, modal=True)
-                    saveSample(fileIn, sampleName)
+                    saveSample(fileIn, selectedSampleName)
                     imageViewerWindow.close()
                     sys.exit()
 
             # If a sample is clicked in the list box, update the photosList to show that sample
             if event == "-SAMPLESLISTBOX-":
+                # Update the radio button and control to accepted
+                radioControl = "Accepted"
+                imageViewerWindow["-ACCEPTEDRADIO-"].update(value=True)
+
+                # Check if there are any rejected photos for this sample.  If not, disable the reject radio
+                if len(globalSaveDict.get(imageViewerWindow["-SAMPLESLISTBOX-"].get()[0])[1]) == 0:
+                    imageViewerWindow["-REJECTEDRADIO-"].update(disabled=True)
+                else:
+                    imageViewerWindow["-REJECTEDRADIO-"].update(disabled=False)
+
+                # Update image viewer to show accepted sampled photos from the newly selected sample
                 imgNum = 0
-                photosList = globalSaveDict.get(imageViewerWindow["-SAMPLESLISTBOX-"].get()[0])
+                photosList = globalSaveDict.get(imageViewerWindow["-SAMPLESLISTBOX-"].get()[0])[0]
                 update_image()
 
     # Runs the Collection Picker Window
@@ -485,10 +595,10 @@ def main():
                     fileInCount = 0
 
                     # Blur filter selected.
-                    isBlur = values["-BLURRADIO-"]
+                    isBlur = values["-BLURCHECKBOX-"]
 
                     # BRISQUE filter selected.
-                    isBrisque = values["-BRISQUERADIO-"]
+                    isBrisque = values["-BRISQUECHECKBOX-"]
 
                     # Clean up the sourceFileList
                     for collectionPhoto in sourceFileList[:]:
@@ -504,8 +614,11 @@ def main():
                     # Get length for use when updating FILECOUNTER
                     sourceFileListLen = len(sourceFileList)
 
-                    # Initialize list to hold names of photos picked for the sample
+                    # Initialize lists to hold names of photos picked for the sample
                     sampledPhotos = []
+
+                    # Initialize lists to hold names of photos rejected for the sample
+                    rejectedSampledPhotos = []
 
                     # TESTING
                     # Initialize dictionaries to store info on image quality assessment scores
@@ -523,9 +636,11 @@ def main():
                         if 100*random.random() <= chance:
                             path=os.path.join(fileIn, collectionPhoto)
 
+                            # Read image for image quality assessment
+                            img = cv.imread(path)
+
                             if isBlur:
                                 # Get blur score.  Low score == blurry
-                                img = cv.imread(path)
                                 grey = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
                                 blurScore = cv.Laplacian(grey, cv.CV_64F).var()
 
@@ -538,7 +653,7 @@ def main():
 
                             if (isBlur and isBrisque):
                                 # If blurScore and brisqueScore are acceptable, copy photo to sample
-                                if (blurScore > 15 and (blurScore > 35 or brisqueScore.item() < 60)): # Slow run
+                                if (blurScore > 35 and brisqueScore.item() < 60): # Slow run
                                     # Add the photo file name to list
                                     sampledPhotos.append(collectionPhoto)
 
@@ -546,6 +661,9 @@ def main():
                                     # Build dictionary of accepted image quality assessment scores
                                     accepted[collectionPhoto] = [round(blurScore, 2), round(brisqueScore.item(), 2)]
                                 else:
+                                    # Add the photo file name to list
+                                    rejectedSampledPhotos.append(collectionPhoto)
+
                                     # TESTING
                                     # Build dictionary of unaccepted image quality assessment scores
                                     unaccepted[collectionPhoto] = [round(blurScore, 2), round(brisqueScore.item(), 2)]
@@ -558,6 +676,9 @@ def main():
                                     # Build dictionary of accepted image quality assessment scores
                                     accepted[collectionPhoto] = [round(blurScore, 2)]
                                 else:
+                                    # Add the photo file name to list
+                                    rejectedSampledPhotos.append(collectionPhoto)
+
                                     # TESTING
                                     # Build dictionary of unaccepted image quality assessment scores
                                     unaccepted[collectionPhoto] = [round(blurScore, 2)]
@@ -570,9 +691,14 @@ def main():
                                     # Build dictionary of accepted image quality assessment scores
                                     accepted[collectionPhoto] = [round(brisqueScore.item(), 2)]
                                 else:
+                                    # Add the photo file name to list
+                                    rejectedSampledPhotos.append(collectionPhoto)
+
                                     # TESTING
                                     # Build dictionary of unaccepted image quality assessment scores
                                     unaccepted[collectionPhoto] = [round(brisqueScore.item(), 2)]
+                            else:
+                                sampledPhotos.append(collectionPhoto)
 
                     # global isTesting controls whether test results are printed
                     if isTesting:
@@ -586,7 +712,7 @@ def main():
                         sg.popup_no_buttons("Sample is too small!", "Try a larger percentage.", title="", auto_close=True, auto_close_duration=1.8, keep_on_top=True, modal=True)
                     else:
                         collectionPickerWindow.close()
-                        globalSaveDict["Current Sample"] = sampledPhotos
+                        globalSaveDict["Current Sample"] = [sampledPhotos, rejectedSampledPhotos]
 
                         # Open Image Viewer window
                         view_sample_images(fileIn)
