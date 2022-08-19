@@ -189,14 +189,15 @@ def main():
             # Print individual accepted photo results
             print("Accepted Photos")
             for photo in accepted:
-                print("         " + str(photo) + ": (Blur = " + str(accepted[photo][0])  + ") + (Brisque = " + str(accepted[photo][1]) + ")")
+                print("         " + str(photo) + ": (Blur = " + str(accepted[photo][0])  + ") + (Brisque = " + str(accepted[photo][1]) + ")" +"( + (Combined = " + str(accepted[photo][1]/accepted[photo][0]) + ")")
                 acceptedBlurScores.append(accepted[photo][0])
                 acceptedBrisqueScores.append(accepted[photo][1])
 
             # Print individual unaccepted photo results
             print("\nUnaccepted Photos")
             for photo in unaccepted:
-                print("         " + str(photo) + ": (Blur = " + str(unaccepted[photo][0])  + ") + (Brisque = " + str(unaccepted[photo][1]) + ")")
+                print("         " + str(photo) + ": (Blur = " + str(unaccepted[photo][0])  + ") + (Brisque = " + str(unaccepted[photo][1]) + ")" +"( + (Combined = " + str(unaccepted[photo][1]/unaccepted[photo][0]) + ")")
+
                 unacceptedBlurScores.append(unaccepted[photo][0])
                 unacceptedBrisqueScores.append(unaccepted[photo][1])
 
@@ -653,7 +654,7 @@ def main():
 
                             if (isBlur and isBrisque):
                                 # If blurScore and brisqueScore are acceptable, copy photo to sample
-                                if (blurScore > 35 and brisqueScore.item() < 60): # Slow run
+                                if (blurScore > 20 and brisqueScore.item() < 60): # Slow run
                                     # Add the photo file name to list
                                     sampledPhotos.append(collectionPhoto)
 
@@ -668,7 +669,7 @@ def main():
                                     # Build dictionary of unaccepted image quality assessment scores
                                     unaccepted[collectionPhoto] = [round(blurScore, 2), round(brisqueScore.item(), 2)]
                             elif isBlur:
-                                if (blurScore > 35): # Fast run
+                                if (blurScore > 20): # Fast run
                                     # Add the photo file name to list
                                     sampledPhotos.append(collectionPhoto)
 
