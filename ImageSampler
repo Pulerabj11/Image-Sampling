@@ -540,6 +540,15 @@ def main():
                 photosList = globalSaveDict.get(imageViewerWindow["-SAMPLESLISTBOX-"].get()[0])[0]
                 update_image()
 
+    def isCorrupted(fileimage):
+        try:
+            with Image.open(fileimage) as img:
+                img.verify() # verify that it is, in fact an image
+            return False
+        except Exception as e:
+            print(e)
+            return True
+
     # Runs the Collection Picker Window
     # Enter file input path
     # Pick a percentage for the sample of a collection
@@ -637,69 +646,72 @@ def main():
                         if 100*random.random() <= chance:
                             path=os.path.join(fileIn, collectionPhoto)
 
-                            # Read image for image quality assessment
-                            img = cv.imread(path)
 
-                            if isBlur:
-                                # Get blur score.  Low score == blurry
-                                grey = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
-                                blurScore = cv.Laplacian(grey, cv.CV_64F).var()
 
-                            if isBrisque:
-                                # Get image quality score (BRISQUE method)
-                                # BRISQUE values typically range between 0 (Very good quality) and 150 (very bad quality).
-                                # Some clean images may show high BRISQUE values based on the nature of the image.
-                                x = torch.tensor(img).permute(2, 0, 1)[None, ...] / 255.
-                                brisqueScore = piq.brisque(x, data_range=1., reduction='none')
+                            if not isCorrupted(path):
+                                # Read image for image quality assessment
+                                img = cv.imread(path)
 
-                            if (isBlur and isBrisque):
-                                # If blurScore and brisqueScore are acceptable, copy photo to sample
-                                if (blurScore > 20 and brisqueScore.item() < 60): # Slow run
-                                    # Add the photo file name to list
-                                    sampledPhotos.append(collectionPhoto)
+                                if isBlur:
+                                    # Get blur score.  Low score == blurry
+                                    grey = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+                                    blurScore = cv.Laplacian(grey, cv.CV_64F).var()
 
-                                    # TESTING
-                                    # Build dictionary of accepted image quality assessment scores
-                                    accepted[collectionPhoto] = [round(blurScore, 2), round(brisqueScore.item(), 2)]
+                                if isBrisque:
+                                    # Get image quality score (BRISQUE method)
+                                    # BRISQUE values typically range between 0 (Very good quality) and 150 (very bad quality).
+                                    # Some clean images may show high BRISQUE values based on the nature of the image.
+                                    x = torch.tensor(img).permute(2, 0, 1)[None, ...] / 255.
+                                    brisqueScore = piq.brisque(x, data_range=1., reduction='none')
+
+                                if (isBlur and isBrisque):
+                                    # If blurScore and brisqueScore are acceptable, copy photo to sample
+                                    if (blurScore > 20 and brisqueScore.item() < 60): # Slow run
+                                        # Add the photo file name to list
+                                        sampledPhotos.append(collectionPhoto)
+
+                                        # TESTING
+                                        # Build dictionary of accepted image quality assessment scores
+                                        accepted[collectionPhoto] = [round(blurScore, 2), round(brisqueScore.item(), 2)]
+                                    else:
+                                        # Add the photo file name to list
+                                        rejectedSampledPhotos.append(collectionPhoto)
+
+                                        # TESTING
+                                        # Build dictionary of unaccepted image quality assessment scores
+                                        unaccepted[collectionPhoto] = [round(blurScore, 2), round(brisqueScore.item(), 2)]
+                                elif isBlur:
+                                    if (blurScore > 20): # Fast run
+                                        # Add the photo file name to list
+                                        sampledPhotos.append(collectionPhoto)
+
+                                        # TESTING
+                                        # Build dictionary of accepted image quality assessment scores
+                                        accepted[collectionPhoto] = [round(blurScore, 2)]
+                                    else:
+                                        # Add the photo file name to list
+                                        rejectedSampledPhotos.append(collectionPhoto)
+
+                                        # TESTING
+                                        # Build dictionary of unaccepted image quality assessment scores
+                                        unaccepted[collectionPhoto] = [round(blurScore, 2)]
+                                elif isBrisque:
+                                    if (brisqueScore < 60): # Fast run
+                                        # Add the photo file name to list
+                                        sampledPhotos.append(collectionPhoto)
+
+                                        # TESTING
+                                        # Build dictionary of accepted image quality assessment scores
+                                        accepted[collectionPhoto] = [round(brisqueScore.item(), 2)]
+                                    else:
+                                        # Add the photo file name to list
+                                        rejectedSampledPhotos.append(collectionPhoto)
+
+                                        # TESTING
+                                        # Build dictionary of unaccepted image quality assessment scores
+                                        unaccepted[collectionPhoto] = [round(brisqueScore.item(), 2)]
                                 else:
-                                    # Add the photo file name to list
-                                    rejectedSampledPhotos.append(collectionPhoto)
-
-                                    # TESTING
-                                    # Build dictionary of unaccepted image quality assessment scores
-                                    unaccepted[collectionPhoto] = [round(blurScore, 2), round(brisqueScore.item(), 2)]
-                            elif isBlur:
-                                if (blurScore > 20): # Fast run
-                                    # Add the photo file name to list
                                     sampledPhotos.append(collectionPhoto)
-
-                                    # TESTING
-                                    # Build dictionary of accepted image quality assessment scores
-                                    accepted[collectionPhoto] = [round(blurScore, 2)]
-                                else:
-                                    # Add the photo file name to list
-                                    rejectedSampledPhotos.append(collectionPhoto)
-
-                                    # TESTING
-                                    # Build dictionary of unaccepted image quality assessment scores
-                                    unaccepted[collectionPhoto] = [round(blurScore, 2)]
-                            elif isBrisque:
-                                if (brisqueScore < 60): # Fast run
-                                    # Add the photo file name to list
-                                    sampledPhotos.append(collectionPhoto)
-
-                                    # TESTING
-                                    # Build dictionary of accepted image quality assessment scores
-                                    accepted[collectionPhoto] = [round(brisqueScore.item(), 2)]
-                                else:
-                                    # Add the photo file name to list
-                                    rejectedSampledPhotos.append(collectionPhoto)
-
-                                    # TESTING
-                                    # Build dictionary of unaccepted image quality assessment scores
-                                    unaccepted[collectionPhoto] = [round(brisqueScore.item(), 2)]
-                            else:
-                                sampledPhotos.append(collectionPhoto)
 
                     # global isTesting controls whether test results are printed
                     if isTesting:
