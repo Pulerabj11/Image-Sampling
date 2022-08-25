@@ -448,7 +448,7 @@ def main():
                     radioControl = "Rejected"
 
             if event == "-REMOVEFROMSAMPLE-":
-                if len(photosList) is not 1:
+                if len(photosList) != 1:
                     globalSaveDict[selectedSampleName][1].append(globalSaveDict[selectedSampleName][0].pop(imgNum))
                     # Get initial list of rejected photos to populate the viewer
                     photosList = globalSaveDict[selectedSampleName][0]
@@ -459,6 +459,7 @@ def main():
                     if imgNum > (len(photosList)-1):
                         imgNum -= 1
                     update_image()
+                    imageViewerWindow["-REJECTEDRADIO-"].update(disabled=False)
                 else:
                     sg.popup_no_buttons("Can't remove last photo.", title="", auto_close=True, auto_close_duration=1.5, keep_on_top=True, modal=True)
 
@@ -540,6 +541,7 @@ def main():
                 photosList = globalSaveDict.get(imageViewerWindow["-SAMPLESLISTBOX-"].get()[0])[0]
                 update_image()
 
+    # Check if the image is corrupted.  If it is, an error is thrown
     def isCorrupted(fileimage):
         try:
             with Image.open(fileimage) as img:
@@ -646,8 +648,7 @@ def main():
                         if 100*random.random() <= chance:
                             path=os.path.join(fileIn, collectionPhoto)
 
-
-
+                            # Ignore the image if it is corrupted.
                             if not isCorrupted(path):
                                 # Read image for image quality assessment
                                 img = cv.imread(path)
@@ -666,55 +667,61 @@ def main():
 
                                 if (isBlur and isBrisque):
                                     # If blurScore and brisqueScore are acceptable, copy photo to sample
-                                    if (blurScore > 20 and brisqueScore.item() < 60): # Slow run
+                                    if (blurScore > 20 and brisqueScore.item() < 60):
                                         # Add the photo file name to list
                                         sampledPhotos.append(collectionPhoto)
 
                                         # TESTING
                                         # Build dictionary of accepted image quality assessment scores
-                                        accepted[collectionPhoto] = [round(blurScore, 2), round(brisqueScore.item(), 2)]
+                                        if isTesting:
+                                            accepted[collectionPhoto] = [round(blurScore, 2), round(brisqueScore.item(), 2)]
                                     else:
                                         # Add the photo file name to list
                                         rejectedSampledPhotos.append(collectionPhoto)
 
                                         # TESTING
                                         # Build dictionary of unaccepted image quality assessment scores
-                                        unaccepted[collectionPhoto] = [round(blurScore, 2), round(brisqueScore.item(), 2)]
+                                        if isTesting:
+                                            unaccepted[collectionPhoto] = [round(blurScore, 2), round(brisqueScore.item(), 2)]
                                 elif isBlur:
-                                    if (blurScore > 20): # Fast run
+                                    if (blurScore > 20):
                                         # Add the photo file name to list
                                         sampledPhotos.append(collectionPhoto)
 
                                         # TESTING
                                         # Build dictionary of accepted image quality assessment scores
-                                        accepted[collectionPhoto] = [round(blurScore, 2)]
+                                        if isTesting:
+                                            accepted[collectionPhoto] = [round(blurScore, 2)]
                                     else:
                                         # Add the photo file name to list
                                         rejectedSampledPhotos.append(collectionPhoto)
 
                                         # TESTING
                                         # Build dictionary of unaccepted image quality assessment scores
-                                        unaccepted[collectionPhoto] = [round(blurScore, 2)]
+                                        if isTesting:
+                                            unaccepted[collectionPhoto] = [round(blurScore, 2)]
                                 elif isBrisque:
-                                    if (brisqueScore < 60): # Fast run
+                                    if (brisqueScore < 60):
                                         # Add the photo file name to list
                                         sampledPhotos.append(collectionPhoto)
 
                                         # TESTING
                                         # Build dictionary of accepted image quality assessment scores
-                                        accepted[collectionPhoto] = [round(brisqueScore.item(), 2)]
+                                        if isTesting:
+                                            accepted[collectionPhoto] = [round(brisqueScore.item(), 2)]
                                     else:
                                         # Add the photo file name to list
                                         rejectedSampledPhotos.append(collectionPhoto)
 
                                         # TESTING
                                         # Build dictionary of unaccepted image quality assessment scores
-                                        unaccepted[collectionPhoto] = [round(brisqueScore.item(), 2)]
+                                        if isTesting:
+                                            unaccepted[collectionPhoto] = [round(brisqueScore.item(), 2)]
                                 else:
                                     sampledPhotos.append(collectionPhoto)
 
                     # global isTesting controls whether test results are printed
-                    if isTesting:
+                    if isTesting and (isBlur or isBrisque):
                         testing(isBlur, isBrisque, accepted, unaccepted)
                     
                     # If no photos were sampled, notify user
