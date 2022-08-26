@@ -667,7 +667,7 @@ def main():
 
                                 if (isBlur and isBrisque):
                                     # If blurScore and brisqueScore are acceptable, copy photo to sample
-                                    if (blurScore > 20 and brisqueScore.item() < 60):
+                                    if (blurScore > 10 and brisqueScore.item() < 75):
                                         # Add the photo file name to list
                                         sampledPhotos.append(collectionPhoto)
 
