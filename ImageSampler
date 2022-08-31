@@ -5,10 +5,14 @@ from PIL import Image, ImageOps # Pillow
 import torch # PyTorch
 import piq # PyTorch Image Quality
 import cv2 as cv # Open Source Computer Vision (OpenCV)
+import time
 
 def main():
+    end = 0
+    start = 0
+
     # Controls printed testing results
-    isTesting = True
+    isTesting = False
 
     # Set the theme (Parkside Colors)
     sg.theme("Dark")
@@ -285,7 +289,9 @@ def main():
     # Runs the image viewer
     # Browse the sampled images
     # Save or delete the samples
-    def view_sample_images(fileIn):
+    def view_sample_images(start, fileIn):
+        end = time.time()
+        print(end - start)
 
         # Get the image from the list of files in the sample.  Save it to memory.
         def get_image():
@@ -420,7 +426,7 @@ def main():
 
             if event == sg.WIN_CLOSED:
                 if ask_to_save():
-                    view_sample_images(fileIn)
+                    view_sample_images(start, fileIn)
                     break
                     
             if event == "Exit":
@@ -575,20 +581,21 @@ def main():
                 if len(globalSaveDict) == 0:
                     sys.exit()
                 elif ask_to_save():
-                    view_sample_images(fileIn)
+                    view_sample_images(start, fileIn)
                     break
 
             if event == "Exit":
                 # If there is at least one sample in the dictionary, ask if the user wants to save.
                 if len(globalSaveDict) > 0:
                     collectionPickerWindow.close()
-                    view_sample_images(fileIn)
+                    view_sample_images(start, fileIn)
                     break
                 elif ask_to_save():
                     sys.exit()
 
             # On press of "OK" button, take a sample of a collection of photos
             if event == "Ok":
+                start = time.time()
                 # Set file I/O
                 fileIn = values['-INPUTPATH-'].replace("\\","\\\\")  # Location of photos to be sampled
                 fileIn = fileIn.replace("\\\\\\\\uwpfs.ad.uwp.edu\\\\Departments", "M:") # Replace if server location is given
@@ -684,7 +691,7 @@ def main():
                                         if isTesting:
                                             unaccepted[collectionPhoto] = [round(blurScore, 2), round(brisqueScore.item(), 2)]
                                 elif isBlur:
-                                    if (blurScore > 20):
+                                    if (blurScore > 10):
                                         # Add the photo file name to list
                                         sampledPhotos.append(collectionPhoto)
 
@@ -701,7 +708,7 @@ def main():
                                         if isTesting:
                                             unaccepted[collectionPhoto] = [round(blurScore, 2)]
                                 elif isBrisque:
-                                    if (brisqueScore < 60):
+                                    if (brisqueScore < 75):
                                         # Add the photo file name to list
                                         sampledPhotos.append(collectionPhoto)
 
@@ -735,7 +742,7 @@ def main():
                         globalSaveDict["Current Sample"] = [sampledPhotos, rejectedSampledPhotos]
 
                         # Open Image Viewer window
-                        view_sample_images(fileIn)
+                        view_sample_images(start, fileIn)
 
     # Ask the user whether they would like to save a sample
     def ask_to_save():

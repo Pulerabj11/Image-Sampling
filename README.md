@@ -13,23 +13,23 @@
 ## Introduction
 This program is written in Python and uses a variety of libraries to open, read, view, and manipulate images.  Its purpose is to take a sample of a collection of images and filter out poor quality images using two methods of image quality assessment.
 
-It prompts the user to enter a file path to a folder containing images.  The user chooses a percent for the sample size.  They also choose a fast or slow mode which determines the level of image quality filtering.
+It prompts the user to enter a file path to a folder containing images.  The user chooses a percent for the sample size.  They also choose between a blur and/or BRISQUE filter which determines the level of image quality filtering.
 
 Once the sample is created, an image viewer opens which allows the user to browse samples, create more samples, or save a sample.
 
 The acceptable image file types are **jpg, png, bmp, tiff, and tif**.
 
 ## Windows
-**Collection Picker:**  This window allows the user to browse for a folder or enter a file path.  A sample is created using the given percentage and run-mode (fast or slow).  Slow mode uses blur and BRISQUE scores to filter out poor quality images.
+**Collection Picker:**  This window allows the user to browse for a folder or enter a file path.  A sample is created using the given percentage and filters blur and/or BRISQUE).
 
 **Image Viewer:**  This window allows the user to browse their samples.  From here, they can either choose to create another sample or save one.  The sample will be saved in the original collection's folder.
 
 ## Image Quality Assessment
-**Blur Score**  This is implemented with the Open Computer Vision library.  This is the only image quality assessment that runs in fast mode.  To get the blur score, a laplacian operation is performed on each pixel in the image.  Then, the variance of the resulting values is obtained.  This value determines how similar each pixel is overall.  In a blurry image, colors and edges blend together resulting in a low variance.
+**Blur Score**  This is implemented with the Open Computer Vision library.  To get the blur score, a Laplacian operation is performed on each pixel in the image.  Then, the variance of the resulting values is obtained.  This value determines how similar each pixel is overall.  In a blurry image, colors and edges blend together resulting in a low variance.
 
 **Low variance == More blurry**
 
-**BRISQUE:**  Blind/Referenceless Image Spatial QUality Evaluator is a model for computing an image quality score.  This assessment is done based on predetermined values which indicate good image quality.  It is used alongside the blur score when running in slow mode.
+**BRISQUE:**  Blind/Referenceless Image Spatial QUality Evaluator is a model for computing an image quality score.  This assessment is done based on predetermined values which indicate good image quality.
 
 **Low BRISQUE score == Higher quality**
 
@@ -39,7 +39,6 @@ The acceptable image file types are **jpg, png, bmp, tiff, and tif**.
 **[Pillow:](https://python-pillow.org/)**  AKA 'Python Imaging Library'.  This library is used to open and manipulate images.
 
 **[PyTorch:](https://pytorch.org/docs/stable/index.html)**  This library is a used to create a tensor from image data.  A tensor is a generic n-dimension array.  A tensor is needed when calculating the BRISQUE scores for image quality assessment.
-
 
 **[PyTorch Image Quality:](https://piq.readthedocs.io/en/latest/)**  This library is used to calculate the BRISQUE scores for image quality assessment.
 
