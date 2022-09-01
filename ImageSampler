@@ -56,11 +56,11 @@ def main():
 
         optionsAndButtonsRow = [
             [
-                sg.Frame("", [[sg.Button("Ok", size=(7, None), pad=(0,0), bind_return_key=True)]], pad=(0,0), element_justification="l", relief=sg.RELIEF_FLAT),
+                sg.Frame("", [[sg.Button("Ok", key="-OKBUTTON-", size=(7, None), pad=(0,0), bind_return_key=True)]], pad=(0,0), element_justification="l", relief=sg.RELIEF_FLAT),
                 sg.Push(),
                 sg.Frame("", checkboxOptions, relief=sg.RELIEF_FLAT),
                 sg.Push(),
-                sg.Frame("", [[sg.Button("Exit", size=(7, None), pad=(0,0))]], pad=(0,0), element_justification="r", relief=sg.RELIEF_FLAT)
+                sg.Frame("", [[sg.Button("Exit", key="-EXITBUTTON-", size=(7, None), pad=(0,0))]], pad=(0,0), element_justification="r", relief=sg.RELIEF_FLAT)
             ]
         ]
 
@@ -125,11 +125,11 @@ def main():
         giveSampleNameLayout = [
             [
                 [sg.Text(text="Rename 'Current Sample'.")],
-                [sg.InputText(size=(25, 15), key="-SAMPLENAMEINPUT-", focus=True), sg.Button("Submit", size=(7, None), bind_return_key=True)]
+                [sg.InputText(size=(25, 15), key="-SAMPLENAMEINPUT-", focus=True, ), sg.Button("Submit", size=(7, None), bind_return_key=True)]
             ]
         ]
 
-        return sg.Window("", giveSampleNameLayout, element_justification="c", keep_on_top=True, modal=True)
+        return sg.Window("", giveSampleNameLayout, element_justification="c", keep_on_top=True, modal=True, finalize=True)
 
     # Create rename_sample window
     def make_window_rename_sample():
@@ -140,7 +140,7 @@ def main():
             ]
         ]
 
-        return sg.Window("", giveSampleNameLayout, element_justification="c", keep_on_top=True, modal=True, use_default_focus=False)
+        return sg.Window("", giveSampleNameLayout, element_justification="c", keep_on_top=True, modal=True, finalize=True)
 
     # Create ask_to_save window
     def make_window_ask_to_save():
@@ -339,6 +339,7 @@ def main():
 
             # Create rename_sample window
             renameSampleWindow = window
+            renameSampleWindow["-SAMPLENAMEINPUT-"].set_focus()
 
             # rename_sample Event Loop
             while True:
@@ -584,7 +585,7 @@ def main():
                     view_sample_images(start, fileIn)
                     break
 
-            if event == "Exit":
+            if event == "-EXITBUTTON-":
                 # If there is at least one sample in the dictionary, ask if the user wants to save.
                 if len(globalSaveDict) > 0:
                     collectionPickerWindow.close()
@@ -594,16 +595,25 @@ def main():
                     sys.exit()
 
             # On press of "OK" button, take a sample of a collection of photos
-            if event == "Ok":
+            if event == "-OKBUTTON-":
                 start = time.time()
                 # Set file I/O
-                fileIn = values['-INPUTPATH-'].replace("\\","\\\\")  # Location of photos to be sampled
+                fileIn = values['-INPUTPATH-'].replace("\b\\\b","\\\\")  # Location of photos to be sampled
                 fileIn = fileIn.replace("\\\\\\\\uwpfs.ad.uwp.edu\\\\Departments", "M:") # Replace if server location is given
 
                 # Check for formatting issues before checking the folder paths
                 if not os.path.exists(fileIn):
                     sg.popup_no_buttons("Invalid source folder path!", title="", auto_close=True, auto_close_duration=1.8, keep_on_top=True, modal=True)                  
                 else:
+                    # Disable elements while the sampler is running
+                    collectionPickerWindow["-BROWSE-"].update(disabled=True)
+                    collectionPickerWindow["-INPUTPATH-"].update(disabled=True)
+                    collectionPickerWindow["-SLIDER-"].update(disabled=True)
+                    collectionPickerWindow["-BLURCHECKBOX-"].update(disabled=True)
+                    collectionPickerWindow["-BRISQUECHECKBOX-"].update(disabled=True)
+                    collectionPickerWindow["-OKBUTTON-"].update(disabled=True)
+                    collectionPickerWindow["-EXITBUTTON-"].update(disabled=True)
+
                     # User sets the percent of collection they want
                     chance = values["-SLIDER-"]
 
@@ -737,6 +747,21 @@ def main():
                         collectionPickerWindow["-FILEINCOUNTER-"].update("")
                         collectionPickerWindow.refresh()
                         sg.popup_no_buttons("Sample is too small!", "Try a larger percentage.", title="", auto_close=True, auto_close_duration=1.8, keep_on_top=True, modal=True)
+                        
+                        # Re-enable elements if the sample is too small
+                        collectionPickerWindow["-BROWSE-"].update(disabled=False)
+                        collectionPickerWindow["-INPUTPATH-"].update(disabled=False)
+                        collectionPickerWindow["-SLIDER-"].update(disabled=False)
+                        collectionPickerWindow["-BLURCHECKBOX-"].update(disabled=False)
+                        collectionPickerWindow["-BRISQUECHECKBOX-"].update(disabled=False)
+                        collectionPickerWindow["-OKBUTTON-"].update(disabled=False)
+                        collectionPickerWindow["-EXITBUTTON-"].update(disabled=False)
+
+                        # If there is at least 1 sample, update the collection picker to disable the file input.
+                        if len(globalSaveDict) > 0:
+                            collectionPickerWindow["-INPUTPATH-"].update(fileIn)
+                            collectionPickerWindow["-INPUTPATH-"].update(disabled=True)
+                            collectionPickerWindow["-BROWSE-"].update(disabled=True)
                     else:
                         collectionPickerWindow.close()
                         globalSaveDict["Current Sample"] = [sampledPhotos, rejectedSampledPhotos]
