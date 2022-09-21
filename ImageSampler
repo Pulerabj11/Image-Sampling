@@ -5,12 +5,8 @@ from PIL import Image, ImageOps # Pillow
 import torch # PyTorch
 import piq # PyTorch Image Quality
 import cv2 as cv # Open Source Computer Vision (OpenCV)
-import time
 
 def main():
-    end = 0
-    start = 0
-
     # Controls printed testing results
     isTesting = False
 
@@ -77,7 +73,7 @@ def main():
             ]
         ]
 
-        return sg.Window("Collection Picker", collectionPickerLayout, use_default_focus=False, finalize=True)
+        return sg.Window("Collection Picker", collectionPickerLayout, use_default_focus=False, finalize=True, icon='icon.ico')
 
     # Create view_sample_images window
     def make_window_image_viewer(bio, imgNum, sampledPhotos, fixed_height, fileIn):
@@ -107,7 +103,7 @@ def main():
         ]
 
         listCol = [
-            [sg.Listbox(values=list(globalSaveDict), enable_events=True, select_mode="LISTBOX_SELECT_MODE_SINGLE", key="-SAMPLESLISTBOX-", default_values=list(globalSaveDict)[-1], size=(40, 30))],
+            [sg.Listbox(values=list(globalSaveDict), enable_events=True, select_mode="LISTBOX_SELECT_MODE_SINGLE", key="-SAMPLESLISTBOX-", default_values=list(globalSaveDict)[-1], size=(40, 39))],
             [sg.Button("Save", size=(7, None))]
         ]
         
@@ -118,7 +114,7 @@ def main():
             ]
         ]
 
-        return sg.Window("Image Viewer", imageViewerLayout, size=(1280,fixed_height+132), use_default_focus=False, finalize=True)
+        return sg.Window("Image Viewer", imageViewerLayout, size=(1280,fixed_height+132), use_default_focus=False, finalize=True, icon='icon.ico')
 
     # Create rename_sample window
     def make_window_rename_current_sample():
@@ -129,7 +125,7 @@ def main():
             ]
         ]
 
-        return sg.Window("", giveSampleNameLayout, element_justification="c", keep_on_top=True, modal=True, finalize=True)
+        return sg.Window("", giveSampleNameLayout, element_justification="c", keep_on_top=True, modal=True, finalize=True, icon='icon.ico')
 
     # Create rename_sample window
     def make_window_rename_sample():
@@ -140,7 +136,7 @@ def main():
             ]
         ]
 
-        return sg.Window("", giveSampleNameLayout, element_justification="c", keep_on_top=True, modal=True, finalize=True)
+        return sg.Window("", giveSampleNameLayout, element_justification="c", keep_on_top=True, modal=True, finalize=True, icon='icon.ico')
 
     # Create ask_to_save window
     def make_window_ask_to_save():
@@ -151,7 +147,7 @@ def main():
             ]
         ]
 
-        return sg.Window("", askToSaveLayout, element_justification="c", keep_on_top=True, modal=True, use_default_focus=False)
+        return sg.Window("", askToSaveLayout, element_justification="c", keep_on_top=True, modal=True, use_default_focus=False, icon='icon.ico')
 
     # Loop through the photos given by the sampleName key in globalSaveDict
     # Copy them to a new folder created with the sample name
@@ -289,9 +285,7 @@ def main():
     # Runs the image viewer
     # Browse the sampled images
     # Save or delete the samples
-    def view_sample_images(start, fileIn):
-        end = time.time()
-        print(end - start)
+    def view_sample_images(fileIn):
 
         # Get the image from the list of files in the sample.  Save it to memory.
         def get_image():
@@ -427,7 +421,7 @@ def main():
 
             if event == sg.WIN_CLOSED:
                 if ask_to_save():
-                    view_sample_images(start, fileIn)
+                    view_sample_images(fileIn)
                     break
                     
             if event == "Exit":
@@ -582,21 +576,24 @@ def main():
                 if len(globalSaveDict) == 0:
                     sys.exit()
                 elif ask_to_save():
-                    view_sample_images(start, fileIn)
+                    view_sample_images(fileIn)
                     break
+                else:
+                    sys.exit()
 
             if event == "-EXITBUTTON-":
                 # If there is at least one sample in the dictionary, ask if the user wants to save.
-                if len(globalSaveDict) > 0:
-                    collectionPickerWindow.close()
-                    view_sample_images(start, fileIn)
-                    break
+                if len(globalSaveDict) == 0:
+                    sys.exit()
                 elif ask_to_save():
+                    collectionPickerWindow.close()
+                    view_sample_images(fileIn)
+                    break
+                else:
                     sys.exit()
 
             # On press of "OK" button, take a sample of a collection of photos
             if event == "-OKBUTTON-":
-                start = time.time()
                 # Set file I/O
                 fileIn = values['-INPUTPATH-'].replace("\b\\\b","\\\\")  # Location of photos to be sampled
                 fileIn = fileIn.replace("\\\\\\\\uwpfs.ad.uwp.edu\\\\Departments", "M:") # Replace if server location is given
@@ -767,7 +764,7 @@ def main():
                         globalSaveDict["Current Sample"] = [sampledPhotos, rejectedSampledPhotos]
 
                         # Open Image Viewer window
-                        view_sample_images(start, fileIn)
+                        view_sample_images(fileIn)
 
     # Ask the user whether they would like to save a sample
     def ask_to_save():
