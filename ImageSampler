@@ -305,7 +305,7 @@ def main():
                 return bio
             except Exception as e:
                 print("ERROR: " + e)
-                sg.popup_no_buttons("Error: A non-image file made it into the sample.", keep_on_top=True, modal=True)
+                sg.popup_no_buttons("Error: A non-image file made it into the sample.", keep_on_top=True, modal=True, icon='icon.ico')
                 sys.exit()
 
         # Calculate the width based on a fixed height
@@ -322,7 +322,7 @@ def main():
                 imageViewerWindow["-IMAGE-"].update(data=bio.getvalue())
             except Exception as e:
                 print("ERROR: " + e)
-                sg.popup_no_buttons("Error: Problem reading image.", keep_on_top=True, modal=True)
+                sg.popup_no_buttons("Error: Problem reading image.", keep_on_top=True, modal=True, icon='icon.ico')
             
             # Update the file counter and file path
             imageViewerWindow["-IMAGECOUNT-"].update(str(imgNum+1) + " / " + str(len(photosList)))
@@ -334,6 +334,9 @@ def main():
             # Create rename_sample window
             renameSampleWindow = window
             renameSampleWindow["-SAMPLENAMEINPUT-"].set_focus()
+
+            # Prohibited folder name characters
+            badChars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|']
 
             # rename_sample Event Loop
             while True:
@@ -356,18 +359,30 @@ def main():
 
                     # Don't allow a sample name above 25 characters
                     if len(sampleName) > 25:
-                        sg.popup_no_buttons("Name too long.", title="", auto_close=True, auto_close_duration=1.5, keep_on_top=True, modal=True)
+                        sg.popup_no_buttons("Name too long.", title="", auto_close=True, auto_close_duration=1.5, keep_on_top=True, modal=True, icon='icon.ico')
                         acceptableName = False
 
                     # Don't allow an empty sample name
                     elif sampleName == "":
-                        sg.popup_no_buttons("Please enter a name.", title="", auto_close=True, auto_close_duration=1.5, keep_on_top=True, modal=True)
+                        sg.popup_no_buttons("Please enter a name.", title="", auto_close=True, auto_close_duration=1.5, keep_on_top=True, modal=True, icon='icon.ico')
                         acceptableName = False
+                    
                     else:
+                        # If the sample name is already in globalSaveDict, do not accept it.
                         for key in globalSaveDict.keys():
-                            # If the sample name is already in globalSaveDict or is already a folder name, do not accept it.
-                            if (sampleName == key) or (os.path.exists(path)):
-                                sg.popup_no_buttons("Name taken.", title="", auto_close=True, auto_close_duration=1.5, keep_on_top=True, modal=True)
+                            if (sampleName == key):
+                                sg.popup_no_buttons("Name taken.", title="", auto_close=True, auto_close_duration=1.5, keep_on_top=True, modal=True, icon='icon.ico')
+                                acceptableName = False
+
+                        # Don't allow duplicate folder names
+                        if os.path.exists(path):
+                            sg.popup_no_buttons("Name taken.", title="", auto_close=True, auto_close_duration=1.5, keep_on_top=True, modal=True, icon='icon.ico')
+                            acceptableName = False
+
+                        # Don't allow prohibited folder name characters
+                        for char in badChars:
+                            if char in sampleName:
+                                sg.popup_no_buttons("Folder name cannot contain /, \\, :, *, ?, \", <, >, or |.", title="", auto_close=True, auto_close_duration=3, keep_on_top=True, modal=True, icon='icon.ico')
                                 acceptableName = False
 
                     # If the sample name is not a duplicate, update globalSaveDict
@@ -462,7 +477,7 @@ def main():
                     update_image()
                     imageViewerWindow["-REJECTEDRADIO-"].update(disabled=False)
                 else:
-                    sg.popup_no_buttons("Can't remove last photo.", title="", auto_close=True, auto_close_duration=1.5, keep_on_top=True, modal=True)
+                    sg.popup_no_buttons("Can't remove last photo.", title="", auto_close=True, auto_close_duration=1.5, keep_on_top=True, modal=True, icon='icon.ico')
 
             if event == "-ADDTOSAMPLE-":
                 globalSaveDict[selectedSampleName][0].append(globalSaveDict[selectedSampleName][1].pop(imgNum))
@@ -515,12 +530,12 @@ def main():
 
                     # If rename_sample returns None, then the sample name was not renamed
                     if selectedSampleName != None:
-                        sg.popup_no_buttons("Saving...", title="", non_blocking=True, keep_on_top=True, modal=True)
+                        sg.popup_no_buttons("Saving...", title="", non_blocking=True, keep_on_top=True, modal=True, icon='icon.ico')
                         saveSample(fileIn, selectedSampleName)
                         imageViewerWindow.close()
                         sys.exit()
                 else:
-                    sg.popup_no_buttons("Saving...", title="", non_blocking=True, keep_on_top=True, modal=True)
+                    sg.popup_no_buttons("Saving...", title="", non_blocking=True, keep_on_top=True, modal=True, icon='icon.ico')
                     saveSample(fileIn, selectedSampleName)
                     imageViewerWindow.close()
                     sys.exit()
@@ -600,7 +615,7 @@ def main():
 
                 # Check for formatting issues before checking the folder paths
                 if not os.path.exists(fileIn):
-                    sg.popup_no_buttons("Invalid source folder path!", title="", auto_close=True, auto_close_duration=1.8, keep_on_top=True, modal=True)                  
+                    sg.popup_no_buttons("Invalid source folder path!", title="", auto_close=True, auto_close_duration=1.8, keep_on_top=True, modal=True, icon='icon.ico')                  
                 else:
                     # Disable elements while the sampler is running
                     collectionPickerWindow["-BROWSE-"].update(disabled=True)
@@ -743,7 +758,7 @@ def main():
                     if len(sampledPhotos) == 0:
                         collectionPickerWindow["-FILEINCOUNTER-"].update("")
                         collectionPickerWindow.refresh()
-                        sg.popup_no_buttons("Sample is too small!", "Try a larger percentage.", title="", auto_close=True, auto_close_duration=1.8, keep_on_top=True, modal=True)
+                        sg.popup_no_buttons("Sample is too small!", "Try a larger percentage.", title="", auto_close=True, auto_close_duration=1.8, keep_on_top=True, modal=True, icon='icon.ico')
                         
                         # Re-enable elements if the sample is too small
                         collectionPickerWindow["-BROWSE-"].update(disabled=False)
