@@ -11,7 +11,7 @@ def main():
     isTesting = False
 
     # Set the theme
-    sg.theme("BrownBlue")
+    sg.theme("DarkBlue3")
 
     # Initialize fileIn
     fileIn = ""
