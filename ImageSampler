@@ -10,8 +10,19 @@ def main():
     # Controls printed testing results
     isTesting = False
 
+    # Add your new theme colors and settings
+    sg.LOOK_AND_FEEL_TABLE['MyCreatedTheme'] = {'BACKGROUND': '#242424',
+                                            'TEXT': '#fcf7f7',
+                                            'INPUT': '#e8e8e8',
+                                            'TEXT_INPUT': '#000000',
+                                            'SCROLL': '#e8e8e8',
+                                            'BUTTON': ('#030303', '#e8e8e8'),
+                                            'PROGRESS': ('#D1826B', '#CC8019'),
+                                            'BORDER': 1, 'SLIDER_DEPTH': 0, 
+                                            'PROGRESS_DEPTH': 0, }
+
     # Set the theme
-    sg.theme("DarkBlue3")
+    sg.theme("MyCreatedTheme")
 
     # Initialize fileIn
     fileIn = ""
